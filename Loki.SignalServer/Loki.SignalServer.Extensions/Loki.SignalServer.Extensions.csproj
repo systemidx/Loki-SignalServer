@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard1.6</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Runtime.Loader" Version="4.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Loki.SignalServer.Extensions.Interfaces\Loki.SignalServer.Extensions.Interfaces.csproj" />
+    <ProjectReference Include="..\Loki.SignalServer.Interfaces\Loki.SignalServer.Interfaces.csproj" />
+  </ItemGroup>
+
+</Project>

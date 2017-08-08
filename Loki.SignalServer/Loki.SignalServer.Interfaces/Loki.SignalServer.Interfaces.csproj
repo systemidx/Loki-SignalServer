@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard1.6</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Loki.Common" Version="1.0.1" />
+    <PackageReference Include="Loki.Interfaces" Version="1.0.1.2" />
+    <PackageReference Include="Loki.Server" Version="1.0.1.2" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="1.1.2" />
+  </ItemGroup>
+
+</Project>
