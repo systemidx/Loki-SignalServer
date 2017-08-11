@@ -1,6 +1,4 @@
-﻿using System.Collections.Concurrent;
-using System.Runtime.CompilerServices;
-using Loki.Common.Events;
+﻿using Loki.Common.Events;
 using Loki.Interfaces.Connections;
 using Loki.Interfaces.Dependency;
 using Loki.Server.Attributes;
@@ -15,15 +13,41 @@ namespace Loki.SignalServer.Routes
     [ConnectionRoute("/")]
     public class Default : WebSocketDataHandler
     {
+        #region Readonly Variables
+
+        /// <summary>
+        /// The extension loader
+        /// </summary>
         private readonly IExtensionLoader _extensionLoader;
+
+        /// <summary>
+        /// The signal router
+        /// </summary>
         private readonly ISignalRouter _signalRouter;
 
+        #endregion
+
+        #region Constructor
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Default"/> class.
+        /// </summary>
+        /// <param name="dependencyUtility">The dependency utility.</param>
         public Default(IDependencyUtility dependencyUtility) : base(dependencyUtility)
         {
             _extensionLoader = dependencyUtility.Resolve<IExtensionLoader>();
             _signalRouter = dependencyUtility.Resolve<ISignalRouter>();
         }
 
+        #endregion
+
+        #region Overrides
+
+        /// <summary>
+        /// Called when [open].
+        /// </summary>
+        /// <param name="sender">The sender.</param>
+        /// <param name="args">The <see cref="ConnectionOpenedEventArgs"/> instance containing the event data.</param>
         public override void OnOpen(IWebSocketConnection sender, ConnectionOpenedEventArgs args)
         {
             if (!Authenticate(sender, args))
@@ -36,11 +60,16 @@ namespace Loki.SignalServer.Routes
             base.OnOpen(sender, args);
         }
 
+        /// <summary>
+        /// Raises the Close event.
+        /// </summary>
+        /// <param name="sender">The sender.</param>
+        /// <param name="args">The <see cref="ConnectionClosedEventArgs"/> instance containing the event data.</param>
         public override void OnClose(IWebSocketConnection sender, ConnectionClosedEventArgs args)
         {
-            //Logger.Info($"{sender.ClientIdentifier}/{sender.UniqueIdentifier} disconnected");
+            Logger.Info($"{sender.ClientIdentifier}/{sender.UniqueIdentifier} disconnected");
 
-            //UnregisterInExtensions(sender);
+            UnregisterInExtensions(sender);
 
             base.OnClose(sender, args);
         }
@@ -53,21 +82,24 @@ namespace Loki.SignalServer.Routes
             base.OnText(sender, args);
         }
 
-        
-        
-        public override void OnTextPart(IWebSocketConnection sender, TextMultiFrameEventArgs args)
-        {
-            
+        #endregion
 
-            base.OnTextPart(sender, args);
-        }
+        #region Helper Methods
 
+        /// <summary>
+        /// Registers the in extensions.
+        /// </summary>
+        /// <param name="sender">The sender.</param>
         private void RegisterInExtensions(IWebSocketConnection sender)
         {
             foreach (IExtension extension in _extensionLoader.Extensions)
                 extension.RegisterConnection(sender);
         }
 
+        /// <summary>
+        /// Unregisters the in extensions.
+        /// </summary>
+        /// <param name="sender">The sender.</param>
         private void UnregisterInExtensions(IWebSocketConnection sender)
         {
             
@@ -82,16 +114,18 @@ namespace Loki.SignalServer.Routes
         private bool Authenticate(IWebSocketConnection sender, ConnectionOpenedEventArgs args)
         {
             //Make sure that we have an ID in the querystring
-            //if (string.IsNullOrWhiteSpace(args.Querystrings["id"]))
-            //{ 
-            //    sender.Close();
-            //    return false;
-            //}
+            if (string.IsNullOrWhiteSpace(args.Querystrings["id"]))
+            {
+                sender.Close();
+                return false;
+            }
 
             //Assign it to the client identifier
             sender.ClientIdentifier = args.Querystrings["id"];
             
             return true;
         }
+
+        #endregion
     }
 }
