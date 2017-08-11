@@ -8,7 +8,7 @@ namespace Loki.SignalServer.Router
         private string _action;
         private string _route;
 
-        public string Module => _module;
+        public string Extension => _module;
         public string Action => _action;
 
         public string Sender { get; set; }

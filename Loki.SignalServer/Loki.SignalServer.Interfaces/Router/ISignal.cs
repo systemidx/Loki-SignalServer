@@ -3,7 +3,7 @@
     public interface ISignal
     {
         string Route { get; set; }
-        string Module { get; }
+        string Extension { get; }
         string Action { get; }
 
         string Sender { get; set; }

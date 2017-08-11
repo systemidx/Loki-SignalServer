@@ -7,8 +7,8 @@
 
   <ItemGroup>
     <PackageReference Include="Loki.Common" Version="1.0.1" />
-    <PackageReference Include="Loki.Interfaces" Version="1.0.1.2" />
-    <PackageReference Include="Loki.Server" Version="1.0.1.2" />
+    <PackageReference Include="Loki.Interfaces" Version="1.0.1.3" />
+    <PackageReference Include="Loki.Server" Version="1.0.1.3" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="1.1.2" />
     <PackageReference Include="System.Runtime.Loader" Version="4.3.0" />
   </ItemGroup>

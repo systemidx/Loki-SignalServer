@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -20,6 +21,12 @@ namespace Loki.SignalServer.Extensions
         private readonly ILogger _logger;
         private readonly IConfigurationHandler _config;
 
+        public HashSet<IExtension> Extensions { get; private set; }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ExtensionLoader"/> class.
+        /// </summary>
+        /// <param name="dependencyUtility">The dependency utility.</param>
         public ExtensionLoader(IDependencyUtility dependencyUtility)
         {
             _dependencyUtility = dependencyUtility;
@@ -27,18 +34,25 @@ namespace Loki.SignalServer.Extensions
             _config = _dependencyUtility.Resolve<IConfigurationHandler>();
         }
 
+        /// <summary>
+        /// Loads the extensions.
+        /// </summary>
+        /// <exception cref="ConfigurationItemMissingException"></exception>
+        /// <exception cref="InvalidExtensionException">
+        /// </exception>
         public void LoadExtensions()
         {
-            IConfigurationSection[] extensions = _config.GetSections(EXTENSION_CONFIGURATION_KEY).ToArray();
-            if (extensions.Length == 0)
+            IConfigurationSection[] extensionConfigurations = _config.GetSections(EXTENSION_CONFIGURATION_KEY).ToArray();
+            if (extensionConfigurations.Length == 0)
                 return;
 
-            foreach (IConfigurationSection extensionConfiguration in extensions)
+            HashSet<IExtension> extensions = new HashSet<IExtension>();
+            foreach (IConfigurationSection extensionConfiguration in extensionConfigurations)
             {
                 string name = extensionConfiguration.Key;
                 string path = _config.Get($"{extensionConfiguration.Path}:path");
 
-                _logger.Debug($"Attempting to load extension {name} from {path}");
+                _logger.Debug($"Loading extension: {name}");
 
                 if (string.IsNullOrEmpty(path) || !File.Exists(path))
                     throw new ConfigurationItemMissingException($"{extensionConfiguration.Path}:path");
@@ -54,7 +68,11 @@ namespace Loki.SignalServer.Extensions
                 IExtension extension = Activator.CreateInstance(type.AsType(), name, _dependencyUtility) as IExtension;
                 if (extension == null)
                     throw new InvalidExtensionException(name, path);
+
+                extensions.Add(extension);
             }
+
+            Extensions = extensions;
         }
     }
 }

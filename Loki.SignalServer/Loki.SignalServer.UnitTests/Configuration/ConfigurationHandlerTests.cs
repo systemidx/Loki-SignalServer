@@ -17,6 +17,8 @@ namespace Loki.SignalServer.UnitTests.Configuration
 {
     public class ConfigurationHandlerTests
     {
+        #region Mocks
+
         private class TestConfiguration
         {
             public string TestVariable { get; set; }
@@ -34,12 +36,16 @@ namespace Loki.SignalServer.UnitTests.Configuration
                 }
             }
         }
-        
+
+        #endregion
+
+        #region Helpers
+
         private void WriteExecuteDelete(Action<IConfigurationHandler> action, string json)
         {
             IDependencyUtility dependencyUtility = new DependencyUtility();
             dependencyUtility.Register(new Mock<ILogger>().Object);
-            
+
             string path = $"{Path.GetTempPath()}/{DateTime.UtcNow.Ticks}.json";
 
             File.WriteAllText(path, json, Encoding.UTF8);
@@ -56,10 +62,14 @@ namespace Loki.SignalServer.UnitTests.Configuration
             }
         }
 
+        #endregion
+
+        #region Tests
+
         [Fact]
         public void ConfigurationHandlerGetsCorrectValueForArray()
         {
-            string json = JsonConvert.SerializeObject(new TestConfiguration {TestSimpleArray = new[] {"a", "b"}});
+            string json = JsonConvert.SerializeObject(new TestConfiguration { TestSimpleArray = new[] { "a", "b" } });
 
             WriteExecuteDelete(handler =>
             {
@@ -71,7 +81,7 @@ namespace Loki.SignalServer.UnitTests.Configuration
         [Fact]
         public void ConfigurationHandlerGetsCorrectValueForKey()
         {
-            string json = JsonConvert.SerializeObject(new TestConfiguration {TestVariable = "value"});
+            string json = JsonConvert.SerializeObject(new TestConfiguration { TestVariable = "value" });
 
             WriteExecuteDelete(handler =>
             {
@@ -102,7 +112,7 @@ namespace Loki.SignalServer.UnitTests.Configuration
         [Fact]
         public void ConfigurationHandlerGetsCorrectValueForSubObjectField()
         {
-            var json = JsonConvert.SerializeObject(new TestConfiguration {SubObject = new TestConfiguration.TestSubObject("TestFieldValue")});
+            var json = JsonConvert.SerializeObject(new TestConfiguration { SubObject = new TestConfiguration.TestSubObject("TestFieldValue") });
 
             WriteExecuteDelete(handler =>
             {
@@ -129,7 +139,7 @@ namespace Loki.SignalServer.UnitTests.Configuration
             WriteExecuteDelete(handler =>
             {
                 IConfigurationSection[] extensions = handler.GetSections("extensions").ToArray();
-                
+
                 Assert.Equal("extension1", extensions[0].Key);
                 Assert.Equal("extension2", extensions[1].Key);
                 Assert.Equal("C:\\Folder", handler.Get($"{extensions[0].Path}:path"));
@@ -141,5 +151,7 @@ namespace Loki.SignalServer.UnitTests.Configuration
         {
             Assert.Throws(typeof(FileNotFoundException), () => new ConfigurationHandler(null));
         }
+
+        #endregion
     }
 }

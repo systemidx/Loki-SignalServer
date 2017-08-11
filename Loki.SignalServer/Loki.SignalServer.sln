@@ -11,7 +11,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Loki.SignalServer.Extension
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Loki.SignalServer.Extensions.Interfaces", "Loki.SignalServer.Extensions.Interfaces\Loki.SignalServer.Extensions.Interfaces.csproj", "{DB443BA4-D403-4B0B-BAB0-2EEB329D87CD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Loki.SignalServer.UnitTests", "Loki.SignalServer.UnitTests\Loki.SignalServer.UnitTests.csproj", "{5DF49716-8F54-4F97-AAA9-4AE161F7AAB9}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Loki.SignalServer.UnitTests", "Loki.SignalServer.UnitTests\Loki.SignalServer.UnitTests.csproj", "{5DF49716-8F54-4F97-AAA9-4AE161F7AAB9}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

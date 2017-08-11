@@ -15,6 +15,8 @@ using Loki.SignalServer.Configuration;
 using Loki.SignalServer.Extensions;
 using Loki.SignalServer.Extensions.Interfaces;
 using Loki.SignalServer.Interfaces.Configuration;
+using Loki.SignalServer.Interfaces.Router;
+using Loki.SignalServer.Router;
 using Microsoft.Extensions.Configuration;
 
 namespace Loki.SignalServer
@@ -28,15 +30,15 @@ namespace Loki.SignalServer
 
         private static IServer _server;
 
-        private static IConfigurationHandler _config;
+        //private static IConfigurationHandler _config;
 
         static void Main(string[] args)
         {
             IDependencyUtility dependencyUtility = new DependencyUtility();
 
             //Get configuration
-            _config = new ConfigurationHandler("configuration.json");
-            dependencyUtility.Register<IConfigurationHandler>(_config);
+            IConfigurationHandler config = new ConfigurationHandler("configuration.json");
+            dependencyUtility.Register<IConfigurationHandler>(config);
 
             //Get security container if available
             ISecurityContainer securityContainer = GenerateSecurityContainer();
@@ -52,13 +54,15 @@ namespace Loki.SignalServer
 
             //Create and register extension loader
             IExtensionLoader extensionLoader = new ExtensionLoader(dependencyUtility);
+            extensionLoader.LoadExtensions();
             dependencyUtility.Register<IExtensionLoader>(extensionLoader);
 
-            extensionLoader.LoadExtensions();
+            ISignalRouter signalRouter = new SignalRouter(dependencyUtility);
+            dependencyUtility.Register<ISignalRouter>(signalRouter);
 
             //Set port and host from configuration
-            int port = Convert.ToInt32(_config.Get(PORT_CONFIGURATION_KEY));
-            IPAddress host = IPAddress.Parse(_config.Get(HOST_CONFIGURATION_KEY));
+            int port = Convert.ToInt32(config.Get(PORT_CONFIGURATION_KEY));
+            IPAddress host = IPAddress.Parse(config.Get(HOST_CONFIGURATION_KEY));
 
             //Hook into our closing event
             AssemblyLoadContext.Default.Unloading += UnloadServer;
@@ -66,6 +70,8 @@ namespace Loki.SignalServer
             //Start the server
             using (_server = new Server.Server("MyServerName", host, port, dependencyUtility))
             {
+                logger.Info($"Listening on {host}:{port}");
+
                 //Disable Nagle's Algorithm
                 _server.NoDelay = true;
 
@@ -79,6 +85,8 @@ namespace Loki.SignalServer
             _server?.Stop();
             Environment.Exit(0);
         }
+
+        #region Logging Events
 
         private static void OnError(object sender, LokiErrorEventArgs e)
         {
@@ -107,6 +115,8 @@ namespace Loki.SignalServer
             Console.ResetColor();
         }
 
+        #endregion
+        
         private static ISecurityContainer GenerateSecurityContainer()
         {
             return new SecurityContainer(null, SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false, true, false);
