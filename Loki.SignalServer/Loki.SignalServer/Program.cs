@@ -3,6 +3,7 @@ using System.IO;
 using System.Net;
 using System.Runtime.Loader;
 using System.Security.Authentication;
+using System.Security.Cryptography.X509Certificates;
 using Loki.Common.Events;
 using Loki.Interfaces;
 using Loki.Interfaces.Dependency;
@@ -11,13 +12,16 @@ using Loki.Interfaces.Security;
 using Loki.Server.Dependency;
 using Loki.Server.Logging;
 using Loki.Server.Security;
+using Loki.SignalServer.Common.Queues;
 using Loki.SignalServer.Configuration;
 using Loki.SignalServer.Extensions;
 using Loki.SignalServer.Extensions.Interfaces;
 using Loki.SignalServer.Interfaces.Configuration;
+using Loki.SignalServer.Interfaces.Queues;
 using Loki.SignalServer.Interfaces.Router;
 using Loki.SignalServer.Router;
 using Microsoft.Extensions.Configuration;
+using Newtonsoft.Json;
 
 namespace Loki.SignalServer
 {
@@ -29,97 +33,103 @@ namespace Loki.SignalServer
         private const string PFX_KEY_CONFIGURATION_KEY = "pfx:key";
 
         private static IServer _server;
-
-        //private static IConfigurationHandler _config;
+        private static IDependencyUtility _dependencyUtility;
+        private static IConfigurationHandler _config;
+        private static ILogger _logger;
+        private static IEventedQueueHandler<ISignal> _queueHandler;
 
         static void Main(string[] args)
         {
-            IDependencyUtility dependencyUtility = new DependencyUtility();
+            _dependencyUtility = new DependencyUtility();
 
-            //Get configuration
-            IConfigurationHandler config = new ConfigurationHandler("configuration.json");
-            dependencyUtility.Register<IConfigurationHandler>(config);
-
-            //Get security container if available
-            ISecurityContainer securityContainer = GenerateSecurityContainer();
-            dependencyUtility.Register<ISecurityContainer>(securityContainer);
-
-            //Create our log wrapper and events
-            ILogger logger = new Logger();
-            logger.OnError += OnError;
-            logger.OnDebug += OnDebug;
-            logger.OnWarn += OnWarn;
-            logger.OnInfo += OnInfo;
-            dependencyUtility.Register<ILogger>(logger);
-
-            //Create and register extension loader
-            IExtensionLoader extensionLoader = new ExtensionLoader(dependencyUtility);
-            extensionLoader.LoadExtensions();
-            dependencyUtility.Register<IExtensionLoader>(extensionLoader);
-
-            ISignalRouter signalRouter = new SignalRouter(dependencyUtility);
-            dependencyUtility.Register<ISignalRouter>(signalRouter);
+            HandleConfiguration();
+            HandleSecurityContainer();
+            HandleLogger();
+            HandleQueueHandler();
+            HandleSignalRouter();
+            HandleExtensionLoader();
 
             //Set port and host from configuration
-            int port = Convert.ToInt32(config.Get(PORT_CONFIGURATION_KEY));
-            IPAddress host = IPAddress.Parse(config.Get(HOST_CONFIGURATION_KEY));
+            int port = Convert.ToInt32(_config.Get(PORT_CONFIGURATION_KEY));
+            IPAddress host = IPAddress.Parse(_config.Get(HOST_CONFIGURATION_KEY));
 
             //Hook into our closing event
             AssemblyLoadContext.Default.Unloading += UnloadServer;
 
             //Start the server
-            using (_server = new Server.Server("MyServerName", host, port, dependencyUtility))
+            using (_server = new Server.Server("MyServerName", host, port, _dependencyUtility))
             {
-                logger.Info($"Listening on {host}:{port}");
+                _logger.Info($"Listening on {host}:{port}");
 
                 //Disable Nagle's Algorithm
                 _server.NoDelay = true;
+
+                //Start the queue handler
+                _queueHandler.Start();
 
                 //Start listening and blocking the main thread
                 _server.Run();
             }
         }
-
+        
         private static void UnloadServer(AssemblyLoadContext assemblyLoadContext)
         {
             _server?.Stop();
             Environment.Exit(0);
         }
 
-        #region Logging Events
-
-        private static void OnError(object sender, LokiErrorEventArgs e)
+        private static void HandleConfiguration()
         {
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine($"[{e.EventTimeStamp}]\tERROR\t{e.Exception}");
-            Console.ResetColor();
+            _config = new ConfigurationHandler("configuration.json");
+
+            _dependencyUtility.Register<JsonSerializerSettings>(new JsonSerializerSettings {
+                TypeNameHandling = TypeNameHandling.All
+            });
+            _dependencyUtility.Register<IConfigurationHandler>(_config);
         }
 
-        private static void OnDebug(object sender, LokiDebugEventArgs e)
+        private static void HandleSecurityContainer()
         {
-            Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine($"[{e.EventTimeStamp}]\tDEBUG\t{e.Message}");
-            Console.ResetColor();
+            X509Certificate2 certificate;
+
+            using (X509Store store = new X509Store(StoreName.My, StoreLocation.LocalMachine))
+            {
+                store.Open(OpenFlags.ReadOnly);
+
+                certificate = store.Certificates.Count == 0 ? null : store.Certificates[0];
+            }
+            
+            _dependencyUtility.Register<ISecurityContainer>(new SecurityContainer(certificate, SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false, true, false));
         }
 
-        private static void OnInfo(object sender, LokiInfoEventArgs e)
+        private static void HandleQueueHandler()
         {
-            Console.ForegroundColor = ConsoleColor.White;
-            Console.WriteLine($"[{e.EventTimeStamp}]\tDEBUG\t{e.Message}");
-            Console.ResetColor();
-        }
-        private static void OnWarn(object sender, LokiWarnEventArgs e)
-        {
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine($"[{e.EventTimeStamp}]\tWARN\t{e.Message}");
-            Console.ResetColor();
+            _queueHandler = new EventedQueueHandler<ISignal>(_dependencyUtility);
+            _dependencyUtility.Register<IEventedQueueHandler<ISignal>>(_queueHandler);
         }
 
-        #endregion
-        
-        private static ISecurityContainer GenerateSecurityContainer()
+        private static void HandleLogger()
         {
-            return new SecurityContainer(null, SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false, true, false);
+            _logger = new Logger();
+            _logger.OnError += (sender, args) => Console.WriteLine($"[{args.EventTimeStamp}]\tERROR\t{args.Exception}");
+            _logger.OnDebug += (sender, args) => Console.WriteLine($"[{args.EventTimeStamp}]\tDEBUG\t{args.Message}");
+            _logger.OnWarn += (sender, args) => Console.WriteLine($"[{args.EventTimeStamp}]\tWARN\t{args.Message}");
+            _logger.OnInfo += (sender, args) => Console.WriteLine($"[{args.EventTimeStamp}]\tINFO\t{args.Message}");
+
+            _dependencyUtility.Register<ILogger>(_logger);
+        }
+
+        private static void HandleSignalRouter()
+        {
+            _dependencyUtility.Register<ISignalRouter>(new SignalRouter(_dependencyUtility));
+        }
+
+        private static void HandleExtensionLoader()
+        {
+            IExtensionLoader extensionLoader = new ExtensionLoader(_dependencyUtility);
+            extensionLoader.LoadExtensions();
+
+            _dependencyUtility.Register<IExtensionLoader>(extensionLoader);
         }
     }
 }

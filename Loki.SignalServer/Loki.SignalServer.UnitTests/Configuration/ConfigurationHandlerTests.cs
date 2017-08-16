@@ -25,6 +25,7 @@ namespace Loki.SignalServer.UnitTests.Configuration
             public string[] TestSimpleArray { get; set; }
             public TestSubObject SubObject { get; set; }
             public TestSubObject[] SubObjectArray { get; set; }
+            public TestEnum TestEnum { get; set; }
 
             public class TestSubObject
             {
@@ -35,6 +36,12 @@ namespace Loki.SignalServer.UnitTests.Configuration
                     TestField = testField;
                 }
             }
+        }
+
+        private enum TestEnum
+        {
+            TestA,
+            TestB
         }
 
         #endregion
@@ -150,6 +157,36 @@ namespace Loki.SignalServer.UnitTests.Configuration
         public void ConfigurationHandlerThrowsExceptionForMissingFile()
         {
             Assert.Throws(typeof(FileNotFoundException), () => new ConfigurationHandler(null));
+        }
+
+        [Fact]
+        public void ConfigurationHandlerReturnsCorrectEnum()
+        {
+            string json = JsonConvert.SerializeObject(new TestConfiguration { TestEnum = TestEnum.TestB });
+            WriteExecuteDelete(handler =>
+            {
+                Assert.Equal(TestEnum.TestB, handler.Get<TestEnum>("TestEnum"));
+            }, json);
+        }
+
+        [Fact]
+        public void ConfigurationHandlerReturnsCorrectEnumWithNonSerializedString()
+        {
+            string json = "{\"TestEnum\":\"Testb\"}";
+            WriteExecuteDelete(handler =>
+            {
+                Assert.Equal(TestEnum.TestB, handler.Get<TestEnum>("TestEnum"));
+            }, json);
+        }
+
+        [Fact]
+        public void ConfigurationHandlerReturnsCorrectNonString()
+        {
+            string json = JsonConvert.SerializeObject(new TestConfiguration { TestVariable = "123" });
+            WriteExecuteDelete(handler =>
+            {
+                Assert.Equal(123, handler.Get<int>("TestVariable"));
+            }, json);
         }
 
         #endregion

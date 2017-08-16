@@ -10,5 +10,7 @@
         string Recipient { get; set; }
 
         byte[] Payload { get; set; }
+
+        bool IsValid { get; }
     }
 }

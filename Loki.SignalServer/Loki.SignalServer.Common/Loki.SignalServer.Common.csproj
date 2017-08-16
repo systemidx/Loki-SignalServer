@@ -2,18 +2,22 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard1.6</TargetFramework>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
     <Version>1.0.0.1</Version>
     <Authors>Systemidx</Authors>
     <Company>Systemidx</Company>
-    <Description>The extension interfaces library for the Loki WebSocket Signaling Server</Description>
+    <Description>The common library for the Loki WebSocket Signaling Server</Description>
     <Copyright>© 2017 Systemidx</Copyright>
     <PackageLicenseUrl>https://github.com/systemidx/Loki.SignalServer/blob/master/LICENSE</PackageLicenseUrl>
     <PackageProjectUrl>https://github.com/systemidx/Loki.SignalServer/</PackageProjectUrl>
     <RepositoryUrl>https://github.com/systemidx/Loki.SignalServer/</RepositoryUrl>
     <PackageTags>Loki WebSocket WebSocketServer NET csharp ws wss signaling chat</PackageTags>
-    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-    <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="RabbitMQ.Client" Version="5.0.1" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Loki.SignalServer.Interfaces\Loki.SignalServer.Interfaces.csproj" />

@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using Loki.SignalServer.Interfaces.Configuration;
 using Microsoft.Extensions.Configuration;
 
@@ -42,6 +44,24 @@ namespace Loki.SignalServer.Configuration
         public string Get(string key)
         {
             return _configuration[key];
+        }
+
+        /// <summary>
+        /// Gets the enum.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="key">The key.</param>
+        /// <returns></returns>
+        public T Get<T>(string key)
+        {
+            string value = _configuration[key];
+
+            Type type = typeof(T);
+
+            if (type.GetTypeInfo().IsEnum)
+                return (T)Enum.Parse(type, value, true);
+
+            return (T) Convert.ChangeType(value, type);
         }
 
         /// <summary>

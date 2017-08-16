@@ -3,9 +3,9 @@ using Loki.Interfaces.Connections;
 using Loki.Interfaces.Dependency;
 using Loki.Server.Attributes;
 using Loki.Server.Data;
+using Loki.SignalServer.Common.Router;
 using Loki.SignalServer.Extensions.Interfaces;
 using Loki.SignalServer.Interfaces.Router;
-using Loki.SignalServer.Router;
 using Newtonsoft.Json;
 
 namespace Loki.SignalServer.Routes

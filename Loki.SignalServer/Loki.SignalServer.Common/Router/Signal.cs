@@ -1,6 +1,6 @@
 ﻿using Loki.SignalServer.Interfaces.Router;
 
-namespace Loki.SignalServer.Router
+namespace Loki.SignalServer.Common.Router
 {
     public class Signal : ISignal
     {
@@ -34,7 +34,6 @@ namespace Loki.SignalServer.Router
         }
 
         public byte[] Payload { get; set; }
-
-        
+        public bool IsValid => !(string.IsNullOrEmpty(Sender) || string.IsNullOrEmpty(Recipient) || string.IsNullOrEmpty(Extension) || string.IsNullOrEmpty(Action));
     }
 }
