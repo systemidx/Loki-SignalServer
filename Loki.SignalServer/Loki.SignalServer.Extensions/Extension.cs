@@ -5,18 +5,50 @@ using Loki.Interfaces.Dependency;
 using Loki.Interfaces.Logging;
 using Loki.Server.Logging;
 using Loki.SignalServer.Extensions.Interfaces;
+using Loki.SignalServer.Interfaces.Configuration;
 using Loki.SignalServer.Interfaces.Router;
 
 namespace Loki.SignalServer.Extensions
 {
     public abstract class Extension : IExtension
     {
-        public string Name { get; }
+        #region Readonly Variables
 
+        /// <summary>
+        /// The dependency utility
+        /// </summary>
         protected readonly IDependencyUtility DependencyUtility;
+
+        /// <summary>
+        /// The logger
+        /// </summary>
         protected readonly ILogger Logger;
 
+        /// <summary>
+        /// The configuration
+        /// </summary>
+        protected readonly IConfigurationHandler Config;
+
+        /// <summary>
+        /// The actions
+        /// </summary>
         private readonly ConcurrentDictionary<string, Func<ISignal, ISignal>> _actions = new ConcurrentDictionary<string, Func<ISignal, ISignal>>();
+
+        #endregion
+
+        #region Properties
+
+        /// <summary>
+        /// Gets the name.
+        /// </summary>
+        /// <value>
+        /// The name.
+        /// </value>
+        public string Name { get; }
+
+        #endregion
+
+        #region Constructor
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Extension"/> class.
@@ -29,8 +61,11 @@ namespace Loki.SignalServer.Extensions
 
             DependencyUtility = dependencyUtility;
             Logger = DependencyUtility.Resolve<ILogger>() ?? DependencyUtility.Register(new Logger());
+            Config = DependencyUtility.Resolve<IConfigurationHandler>();
         }
-        
+
+        #endregion
+
         /// <summary>
         /// Registers the connection.
         /// </summary>
