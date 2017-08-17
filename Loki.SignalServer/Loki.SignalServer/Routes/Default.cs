@@ -74,9 +74,22 @@ namespace Loki.SignalServer.Routes
             base.OnClose(sender, args);
         }
 
+        /// <summary>
+        /// Called when [text].
+        /// </summary>
+        /// <param name="sender">The sender.</param>
+        /// <param name="args">The <see cref="TextFrameEventArgs"/> instance containing the event data.</param>
         public override void OnText(IWebSocketConnection sender, TextFrameEventArgs args)
         {
             ISignal signal = JsonConvert.DeserializeObject<Signal>(args.Message);
+
+            if (signal.Sender != sender.ClientIdentifier)
+            { 
+                Logger.Warn($"Signal from {sender.ClientIdentifier} sent with spoofed sender ({signal.Sender}). Forcibly setting to connection's client identifier.");
+
+                signal.Sender = sender.ClientIdentifier;
+            }
+
             _signalRouter.Route(signal);
 
             base.OnText(sender, args);

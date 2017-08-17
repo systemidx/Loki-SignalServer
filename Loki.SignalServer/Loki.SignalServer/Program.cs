@@ -1,10 +1,8 @@
 ﻿using System;
-using System.IO;
 using System.Net;
 using System.Runtime.Loader;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
-using Loki.Common.Events;
 using Loki.Interfaces;
 using Loki.Interfaces.Dependency;
 using Loki.Interfaces.Logging;
@@ -20,7 +18,6 @@ using Loki.SignalServer.Interfaces.Configuration;
 using Loki.SignalServer.Interfaces.Queues;
 using Loki.SignalServer.Interfaces.Router;
 using Loki.SignalServer.Router;
-using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 
 namespace Loki.SignalServer
