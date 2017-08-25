@@ -20,7 +20,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Loki.SignalServer.Common\Loki.SignalServer.Common.csproj" />
     <ProjectReference Include="..\Loki.SignalServer.Extensions.Interfaces\Loki.SignalServer.Extensions.Interfaces.csproj" />
     <ProjectReference Include="..\Loki.SignalServer.Interfaces\Loki.SignalServer.Interfaces.csproj" />
   </ItemGroup>

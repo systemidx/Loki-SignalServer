@@ -4,7 +4,7 @@
     <TargetFramework>netstandard1.6</TargetFramework>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
-    <Version>1.0.0.2</Version>
+    <Version>1.0.0.3</Version>
     <Authors>Systemidx</Authors>
     <Company>Systemidx</Company>
     <Description>The common library for the Loki WebSocket Signaling Server</Description>
