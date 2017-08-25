@@ -89,12 +89,18 @@ namespace Loki.SignalServer.Extensions
 
                 _logger.Debug($"Loading assembly: {asm.FullName}");
 
-                TypeInfo type = asm.DefinedTypes.FirstOrDefault(x => x.ImplementedInterfaces.Contains(typeof(IExtension)) && !x.IsAbstract);
+                try
+                {
+                    TypeInfo type = asm.DefinedTypes?.FirstOrDefault(x => x.ImplementedInterfaces.Contains(typeof(IExtension)) && !x.IsAbstract);
+                    if (type == null)
+                        continue;
 
-                if (type == null)
-                    continue;
-
-                _extensionTypes.Add(type, name);
+                    _extensionTypes.Add(type, name);
+                }
+                catch (ReflectionTypeLoadException ex)
+                {
+                    _logger.Error(ex);
+                }
             }
         }
     }
