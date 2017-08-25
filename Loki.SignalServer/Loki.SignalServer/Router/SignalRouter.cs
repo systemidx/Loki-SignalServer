@@ -1,7 +1,9 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using Loki.Interfaces.Dependency;
 using Loki.Interfaces.Logging;
 using Loki.SignalServer.Extensions.Interfaces;
+using Loki.SignalServer.Interfaces.Exceptions;
 using Loki.SignalServer.Interfaces.Router;
 using Newtonsoft.Json;
 
@@ -28,6 +30,12 @@ namespace Loki.SignalServer.Router
 
         #endregion
 
+        #region Private Variables
+
+        private bool _isInitialized;
+
+        #endregion
+
         #region Constructor
 
         /// <summary>
@@ -44,10 +52,9 @@ namespace Loki.SignalServer.Router
         #region Public Methods
 
         /// <summary>
-        /// Routes the specified signal.
+        /// Initializes this instance.
         /// </summary>
-        /// <param name="signal">The signal.</param>
-        public void Route(ISignal signal)
+        public void Initialize()
         {
             if (_extensionLoader == null)
                 _extensionLoader = _dependencyUtility.Resolve<IExtensionLoader>();
@@ -55,26 +62,91 @@ namespace Loki.SignalServer.Router
             if (_logger == null)
                 _logger = _dependencyUtility.Resolve<ILogger>();
 
+            _isInitialized = true;
+        }
+
+        /// <summary>
+        /// Routes the specified signal.
+        /// </summary>
+        /// <param name="signal">The signal.</param>
+        public ISignal Route(ISignal signal)
+        {
+            if (!_isInitialized)
+                throw new DependencyNotInitException(nameof(SignalRouter));
+
+            IExtension extension = GetExtension(signal);
+            if (extension == null)
+                throw new InvalidExtensionException($"Attempted to route an to an invalid extension. Route: {signal.Route}");
+
+            _logger.Debug($"Request: {JsonConvert.SerializeObject(signal)}");
+
+            ISignal response = extension.ExecuteAction(signal.Action, signal);
+
+            if (response == null)
+                return null;
+
+            _logger.Debug($"Response: {JsonConvert.SerializeObject(response)}");
+
+            return response;
+        }
+
+        /// <summary>
+        /// Routes the specified signal from an extension to another extension.
+        /// </summary>
+        /// <param name="signal">The signal.</param>
+        /// <returns></returns>
+        /// <exception cref="DependencyNotInitException">SignalRouter</exception>
+        public ISignal RouteExtension(ISignal signal)
+        {
+            if (!_isInitialized)
+                throw new DependencyNotInitException(nameof(SignalRouter));
+
+            IExtension extension = GetExtension(signal);
+            if (extension == null)
+                throw new InvalidExtensionException($"Attempted to route an to an invalid extension. Route: {signal.Route}");    
+
+            _logger.Debug($"Cross Extension Request: {JsonConvert.SerializeObject(signal)}");
+
+            ISignal response = extension.ExecuteCrossExtensionAction(signal.Action, signal);
+            if (response == null)
+                return null;
+
+            _logger.Debug($"Cross Extension Response: {JsonConvert.SerializeObject(response)}");
+
+            return response;
+        }
+
+        #endregion
+
+        #region Private Methods
+
+        /// <summary>
+        /// Gets the extension.
+        /// </summary>
+        /// <param name="signal">The signal.</param>
+        /// <returns></returns>
+        private IExtension GetExtension(ISignal signal)
+        {
             if (signal == null)
             {
-                _logger.Warn($"Null packet attempted to route");
-                return;
+                _logger.Warn("Null packet attempted to route");
+                return null;
             }
 
             if (!signal.IsValid)
-            { 
+            {
                 _logger.Warn($"Invalid packet attempted to route:\r\n{JsonConvert.SerializeObject(signal)}");
-                return;
+                return null;
             }
 
-            IExtension extension = _extensionLoader.Extensions.FirstOrDefault(x => signal.Extension == x.Name);
+            IExtension extension = _extensionLoader.Extensions.FirstOrDefault(x => string.Equals(signal.Extension, x.Name, StringComparison.InvariantCultureIgnoreCase));
             if (extension == null)
             {
                 _logger.Warn($"Unable to route signal to extension: {signal.Extension}");
-                return;
+                return null;
             }
 
-            extension.ExecuteAction(signal.Action, signal);
+            return extension;
         }
 
         #endregion

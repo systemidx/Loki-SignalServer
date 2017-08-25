@@ -2,6 +2,7 @@
 using System.Text;
 using Loki.Interfaces.Dependency;
 using Loki.Interfaces.Logging;
+using Loki.Server.Logging;
 using Loki.SignalServer.Interfaces.Configuration;
 using Loki.SignalServer.Interfaces.Queues;
 using Newtonsoft.Json;
@@ -125,8 +126,22 @@ namespace Loki.SignalServer.Common.Queues.RabbitMq
                 Endpoint = new AmqpTcpEndpoint(config.Get("queue:host"))
             };
 
-            IConnection connection = factory.CreateConnection();
-            
+            IConnection connection;
+            try
+            {
+                connection = factory.CreateConnection();
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex);
+                throw;
+            }
+            finally
+            {
+                _logger.Debug("Connected to RabbitMQ service");
+            }
+
+
             lock (_channelLock)
             { 
                 _channel = connection.CreateModel();

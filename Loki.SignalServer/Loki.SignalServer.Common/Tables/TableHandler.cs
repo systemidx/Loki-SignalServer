@@ -26,7 +26,7 @@ namespace Loki.SignalServer.Common.Tables
             _client = _account.CreateCloudTableClient();
 
             _table = _client.GetTableReference(tableName);
-            _table.CreateIfNotExistsAsync().GetAwaiter().GetResult();
+            //_table.CreateIfNotExistsAsync().GetAwaiter().GetResult();
         }
 
         /// <summary>

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Net;
 using System.Runtime.Loader;
 using System.Security.Authentication;
@@ -10,8 +11,8 @@ using Loki.Interfaces.Security;
 using Loki.Server.Dependency;
 using Loki.Server.Logging;
 using Loki.Server.Security;
+using Loki.SignalServer.Common.Configuration;
 using Loki.SignalServer.Common.Queues;
-using Loki.SignalServer.Configuration;
 using Loki.SignalServer.Extensions;
 using Loki.SignalServer.Extensions.Interfaces;
 using Loki.SignalServer.Interfaces.Configuration;
@@ -57,6 +58,8 @@ namespace Loki.SignalServer
             using (_server = new Server.Server("MyServerName", host, port, _dependencyUtility))
             {
                 _logger.Info($"Listening on {host}:{port}");
+                
+                _router.Initialize();
 
                 //Disable Nagle's Algorithm
                 _server.NoDelay = true;
@@ -87,16 +90,13 @@ namespace Loki.SignalServer
 
         private static void HandleSecurityContainer()
         {
-            X509Certificate2 certificate;
+            string pfxPath = _config.Get(PFX_PATH_CONFIGURATION_KEY);
+            if (!File.Exists(pfxPath))
+                return;
 
-            using (X509Store store = new X509Store(StoreName.My, StoreLocation.LocalMachine))
-            {
-                store.Open(OpenFlags.ReadOnly);
+            X509Certificate2 certificate = new X509Certificate2(pfxPath, _config.Get(PFX_KEY_CONFIGURATION_KEY));
 
-                certificate = store.Certificates.Count == 0 ? null : store.Certificates[0];
-            }
-            
-            _dependencyUtility.Register<ISecurityContainer>(new SecurityContainer(certificate, SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false, true, false));
+            _dependencyUtility.Register<ISecurityContainer>(new SecurityContainer(certificate, SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false, true, true));
         }
 
         private static void HandleQueueHandler()
@@ -116,9 +116,12 @@ namespace Loki.SignalServer
             _dependencyUtility.Register<ILogger>(_logger);
         }
 
+        private static ISignalRouter _router;
+
         private static void HandleSignalRouter()
         {
-            _dependencyUtility.Register<ISignalRouter>(new SignalRouter(_dependencyUtility));
+            _router = new SignalRouter(_dependencyUtility);
+            _dependencyUtility.Register<ISignalRouter>(_router);
         }
 
         private static void HandleExtensionLoader()

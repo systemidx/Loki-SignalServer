@@ -1,12 +1,11 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using Loki.Interfaces.Dependency;
 using Loki.Interfaces.Logging;
 using Loki.Server.Dependency;
-using Loki.SignalServer.Configuration;
+using Loki.SignalServer.Common.Configuration;
 using Loki.SignalServer.Interfaces.Configuration;
 using Microsoft.Extensions.Configuration;
 using Moq;

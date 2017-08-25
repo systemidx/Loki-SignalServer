@@ -5,7 +5,7 @@ using System.Reflection;
 using Loki.SignalServer.Interfaces.Configuration;
 using Microsoft.Extensions.Configuration;
 
-namespace Loki.SignalServer.Configuration
+namespace Loki.SignalServer.Common.Configuration
 {
     public class ConfigurationHandler : IConfigurationHandler
     {
@@ -59,7 +59,7 @@ namespace Loki.SignalServer.Configuration
             Type type = typeof(T);
 
             if (type.GetTypeInfo().IsEnum)
-                return (T)Enum.Parse(type, value, true);
+                return (T)System.Enum.Parse(type, value, true);
 
             return (T) Convert.ChangeType(value, type);
         }

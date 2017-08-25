@@ -2,6 +2,9 @@
 {
     public interface ISignalRouter
     {
-        void Route(ISignal signal);
+        void Initialize();
+
+        ISignal Route(ISignal signal);
+        ISignal RouteExtension(ISignal signal);
     }
 }

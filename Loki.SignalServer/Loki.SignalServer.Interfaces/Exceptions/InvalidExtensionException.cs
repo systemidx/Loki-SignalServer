@@ -6,13 +6,19 @@ namespace Loki.SignalServer.Interfaces.Exceptions
     {
         private readonly string _extensionName;
         private readonly string _extensionPath;
+        private readonly string _message;
 
-        public override string Message => $"Failed to load extension {_extensionName} from {_extensionPath}";
+        public override string Message => _message ?? $"Failed to load extension {_extensionName} from {_extensionPath}";
 
         public InvalidExtensionException(string extensionName, string extensionPath)
         {
             _extensionName = extensionName;
             _extensionPath = extensionPath;
+        }
+
+        public InvalidExtensionException(string message)
+        {
+            _message = message;
         }
     }
 }

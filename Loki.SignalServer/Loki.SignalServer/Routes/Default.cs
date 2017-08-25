@@ -5,6 +5,7 @@ using Loki.Server.Attributes;
 using Loki.Server.Data;
 using Loki.SignalServer.Common.Router;
 using Loki.SignalServer.Extensions.Interfaces;
+using Loki.SignalServer.Interfaces.Exceptions;
 using Loki.SignalServer.Interfaces.Router;
 using Newtonsoft.Json;
 
@@ -90,7 +91,17 @@ namespace Loki.SignalServer.Routes
                 signal.Sender = sender.ClientIdentifier;
             }
 
-            _signalRouter.Route(signal);
+            try
+            {
+                ISignal response = _signalRouter.Route(signal);
+                if (response != null)
+                    sender.SendText(response);
+            }
+            catch (InvalidExtensionException ex)
+            {
+                Logger.Error(ex);
+                throw;
+            }
 
             base.OnText(sender, args);
         }

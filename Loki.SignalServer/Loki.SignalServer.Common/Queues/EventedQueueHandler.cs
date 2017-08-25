@@ -17,27 +17,75 @@ namespace Loki.SignalServer.Common.Queues
     {
         #region Readonly Variables
 
+        /// <summary>
+        /// The dependency utility
+        /// </summary>
         private readonly IDependencyUtility _dependencyUtility;
+
+        /// <summary>
+        /// The queues to process
+        /// </summary>
         private readonly ConcurrentQueue<string> _queuesToProcess = new ConcurrentQueue<string>();
+
+        /// <summary>
+        /// The queues
+        /// </summary>
         private readonly ConcurrentDictionary<string, IEventedQueue<T>> _queues = new ConcurrentDictionary<string, IEventedQueue<T>>();
 
+        /// <summary>
+        /// The queue generators
+        /// </summary>
         private readonly Dictionary<QueueService,Func<string, string, IEventedQueue<T>>> _queueGenerators = new Dictionary<QueueService, Func<string, string, IEventedQueue<T>>>();
 
         #endregion
 
-        #region Vendor Specific Variables
-        
-        #endregion
+        #region Private Variables
 
+        /// <summary>
+        /// The queue service
+        /// </summary>
         private QueueService _queueService;
+
+        /// <summary>
+        /// The processing thread
+        /// </summary>
         private Thread _processingThread;
 
+        /// <summary>
+        /// The thread helper
+        /// </summary>
         private IThreadHelper _threadHelper;
+
+        /// <summary>
+        /// The logger
+        /// </summary>
         private ILogger _logger;
+
+        /// <summary>
+        /// The configuration
+        /// </summary>
         private IConfigurationHandler _config;
 
+        #endregion
+
+        #region Properties
+
+        /// <summary>
+        /// Gets a value indicating whether this instance is running.
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> if this instance is running; otherwise, <c>false</c>.
+        /// </value>
         public bool IsRunning { get; private set; }
 
+        #endregion
+
+        #region Constructor
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="EventedQueueHandler{T}"/> class.
+        /// </summary>
+        /// <param name="dependencyUtility">The dependency utility.</param>
         public EventedQueueHandler(IDependencyUtility dependencyUtility)
         {
             _dependencyUtility = dependencyUtility;
@@ -45,6 +93,13 @@ namespace Loki.SignalServer.Common.Queues
             CreateQueueGenerators();
         }
 
+        #endregion
+
+        #region Public Methods
+
+        /// <summary>
+        /// Starts this instance.
+        /// </summary>
         public void Start()
         {
             IsRunning = true;
@@ -57,23 +112,36 @@ namespace Loki.SignalServer.Common.Queues
             _processingThread = _threadHelper.CreateAndRun(Process);
         }
 
+        /// <summary>
+        /// Stops this instance.
+        /// </summary>
         public void Stop()
         {
             IsRunning = false;
         }
 
-        #region Public Methods
-
+        /// <summary>
+        /// Creates the queue.
+        /// </summary>
+        /// <param name="exchangeId">The exchange identifier.</param>
+        /// <param name="queueId">The identifier.</param>
+        /// <exception cref="ArgumentException">key</exception>
         public void CreateQueue(string exchangeId, string queueId)
         {
             string key = GetKey(exchangeId, queueId);
 
             if (_queues.ContainsKey(key))
-                throw new ArgumentException(nameof(key));
+                return;
 
             _queues[key] = _queueGenerators[this._queueService].Invoke(exchangeId, queueId);
         }
 
+        /// <summary>
+        /// Removes the queue.
+        /// </summary>
+        /// <param name="exchangeId">The exchange identifier.</param>
+        /// <param name="queueId">The queue identifier.</param>
+        /// <exception cref="ArgumentException">key</exception>
         public void RemoveQueue(string exchangeId, string queueId)
         {
             string key = GetKey(exchangeId, queueId);
@@ -84,6 +152,13 @@ namespace Loki.SignalServer.Common.Queues
             _queues.TryRemove(key, out _);
         }
 
+        /// <summary>
+        /// Adds the event.
+        /// </summary>
+        /// <param name="exchangeId">The exchange identifier.</param>
+        /// <param name="queueId">The queue identifier.</param>
+        /// <param name="eventHandler">The event handler.</param>
+        /// <exception cref="ArgumentException">key</exception>
         public void AddEvent(string exchangeId, string queueId, EventHandler<T> eventHandler)
         {
             string key = GetKey(exchangeId, queueId);
@@ -94,6 +169,13 @@ namespace Loki.SignalServer.Common.Queues
             _queues[key].Dequeued += eventHandler;
         }
 
+        /// <summary>
+        /// Removes the event.
+        /// </summary>
+        /// <param name="exchangeId">The exchange identifier.</param>
+        /// <param name="queueId">The queue identifier.</param>
+        /// <param name="eventHandler">The event handler.</param>
+        /// <exception cref="ArgumentException">key</exception>
         public void RemoveEvent(string exchangeId, string queueId, EventHandler<T> eventHandler)
         {
             string key = GetKey(exchangeId, queueId);
@@ -104,6 +186,12 @@ namespace Loki.SignalServer.Common.Queues
             _queues[key].Dequeued -= eventHandler;
         }
 
+        /// <summary>
+        /// Enqueues the specified queue identifier.
+        /// </summary>
+        /// <param name="exchangeId">The exchange identifier.</param>
+        /// <param name="queueId">The queue identifier.</param>
+        /// <param name="obj">The object.</param>
         public void Enqueue(string exchangeId, string queueId, T obj)
         {
             string key = GetKey(exchangeId, queueId);
@@ -119,12 +207,21 @@ namespace Loki.SignalServer.Common.Queues
 
         #region Helper Methods
 
+        /// <summary>
+        /// Creates the queue generators.
+        /// </summary>
         private void CreateQueueGenerators()
         {
             _queueGenerators[QueueService.InMemory] = (exchangeId, queueId) => new InMemoryEventedQueue<T>();
             _queueGenerators[QueueService.RabbitMq] = (exchangeId, queueId) => new RabbitEventedQueue<T>(exchangeId, queueId, _dependencyUtility);
         }
 
+        /// <summary>
+        /// Gets the key.
+        /// </summary>
+        /// <param name="exchangeId">The exchange identifier.</param>
+        /// <param name="queueId">The queue identifier.</param>
+        /// <returns></returns>
         private string GetKey(string exchangeId, string queueId)
         {
             return $"{exchangeId}/{queueId}";
@@ -134,6 +231,9 @@ namespace Loki.SignalServer.Common.Queues
 
         #region Thread Methods
 
+        /// <summary>
+        /// Processes this instance.
+        /// </summary>
         private void Process()
         {
             _logger.Debug("Starting evented queue handler processing thread");

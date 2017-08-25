@@ -1,12 +1,14 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Text;
 using Loki.Interfaces.Connections;
 using Loki.Interfaces.Dependency;
 using Loki.Interfaces.Logging;
-using Loki.Server.Logging;
+using Loki.SignalServer.Common.Router;
 using Loki.SignalServer.Extensions.Interfaces;
 using Loki.SignalServer.Interfaces.Configuration;
 using Loki.SignalServer.Interfaces.Router;
+using Newtonsoft.Json;
 
 namespace Loki.SignalServer.Extensions
 {
@@ -30,9 +32,19 @@ namespace Loki.SignalServer.Extensions
         protected readonly IConfigurationHandler Config;
 
         /// <summary>
+        /// The router
+        /// </summary>
+        private readonly ISignalRouter _router;
+
+        /// <summary>
         /// The actions
         /// </summary>
         private readonly ConcurrentDictionary<string, Func<ISignal, ISignal>> _actions = new ConcurrentDictionary<string, Func<ISignal, ISignal>>();
+
+        /// <summary>
+        /// The cross extension actions
+        /// </summary>
+        private readonly ConcurrentDictionary<string, Func<ISignal, ISignal>> _crossExtensionActions = new ConcurrentDictionary<string, Func<ISignal, ISignal>>();
 
         #endregion
 
@@ -60,12 +72,16 @@ namespace Loki.SignalServer.Extensions
             Name = extensionName;
 
             DependencyUtility = dependencyUtility;
-            Logger = DependencyUtility.Resolve<ILogger>() ?? DependencyUtility.Register(new Logger());
+
+            Logger = DependencyUtility.Resolve<ILogger>();
             Config = DependencyUtility.Resolve<IConfigurationHandler>();
+            _router = DependencyUtility.Resolve<ISignalRouter>();
         }
 
         #endregion
 
+        #region Abstract Methods
+        
         /// <summary>
         /// Registers the connection.
         /// </summary>
@@ -78,6 +94,10 @@ namespace Loki.SignalServer.Extensions
         /// <param name="connection">The connection.</param>
         public abstract void UnregisterConnection(IWebSocketConnection connection);
 
+        #endregion
+
+        #region Public Methods
+
         /// <summary>
         /// Registers the action.
         /// </summary>
@@ -85,9 +105,21 @@ namespace Loki.SignalServer.Extensions
         /// <param name="signalAction">The signalAction.</param>
         public void RegisterAction(string action, Func<ISignal, ISignal> signalAction)
         {
-            _actions[action] = signalAction;
+            _actions[action.ToLowerInvariant()] = signalAction;
 
             Logger.Debug($"Registered extension action: {Name}/{action}");
+        }
+
+        /// <summary>
+        /// Registers the cross extension action.
+        /// </summary>
+        /// <param name="action">The action.</param>
+        /// <param name="signalAction">The signal action.</param>
+        public void RegisterCrossExtensionAction(string action, Func<ISignal, ISignal> signalAction)
+        {
+            _crossExtensionActions[action.ToLowerInvariant()] = signalAction;
+
+            Logger.Debug($"Registered cross extension action: {Name}/{action}");
         }
 
         /// <summary>
@@ -98,21 +130,104 @@ namespace Loki.SignalServer.Extensions
         /// <returns></returns>
         public ISignal ExecuteAction(string action, ISignal signal)
         {
+            return ExecuteAction(action, signal, _actions);
+        }
+
+        /// <summary>
+        /// Creates the response.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="request">The request.</param>
+        /// <param name="payload">The payload.</param>
+        /// <returns></returns>
+        public ISignal CreateResponse<T>(ISignal request, T payload)
+        {
+            string serializedPayload = JsonConvert.SerializeObject(payload);
+
+            return new Signal
+            {
+                Route = request.Route,
+                Sender = "server",
+                Recipient = request.Sender,
+                Payload = Encoding.UTF8.GetBytes(serializedPayload)
+            };
+        }
+
+        #region Cross Extenion Methods
+
+
+        /// <summary>
+        /// Executes the cross extension action.
+        /// </summary>
+        /// <param name="action">The action.</param>
+        /// <param name="signal">The signal.</param>
+        /// <returns></returns>
+        public ISignal ExecuteCrossExtensionAction(string action, ISignal signal)
+        {
+            return ExecuteAction(action, signal, _crossExtensionActions);
+        }
+
+        /// <summary>
+        /// Creates the cross extension request.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="route">The route.</param>
+        /// <param name="sourceExtension">The source extension.</param>
+        /// <param name="payload">The payload.</param>
+        /// <returns></returns>
+        public ISignal CreateCrossExtensionRequest<T>(string route, string sourceExtension, T payload)
+        {
+            return new Signal
+            {
+                Route = route,
+                Sender = sourceExtension,
+                Payload = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(payload))
+            };
+        }
+
+        /// <summary>
+        /// Creates the request.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="signal">The signal.</param>
+        /// <returns></returns>
+        public ISignal SendCrossExtensionRequest<T>(ISignal signal)
+        {
+            return _router.RouteExtension(signal);
+        }
+
+        #endregion
+
+        #endregion
+
+        #region Private Methods
+
+        /// <summary>
+        /// Executes the action.
+        /// </summary>
+        /// <param name="action">The action.</param>
+        /// <param name="signal">The signal.</param>
+        /// <param name="cache">The cache.</param>
+        /// <returns></returns>
+        private ISignal ExecuteAction(string action, ISignal signal, ConcurrentDictionary<string, Func<ISignal, ISignal>> cache)
+        {
             Func<ISignal, ISignal> func = null;
 
             int i = 0;
             do
             {
-                _actions.TryGetValue(action, out func);
+                cache?.TryGetValue(action.ToLowerInvariant(), out func);
             } while (func == null && i < 3);
 
             if (func == null)
-            { 
-                Logger.Warn($"Attempted to execute: {Name}/{action}.\tCould not load action from extension cache.");
+            {
+                Logger.Warn($"Attempted to execute: {Name}/{action}.\tCould not load action from {nameof(cache)}.");
                 return null;
             }
 
             return func.Invoke(signal);
         }
+
+        #endregion
     }
 }
