@@ -27,7 +27,8 @@ namespace Loki.SignalServer.Interfaces.Queues
         /// </summary>
         /// <param name="exchangeId">The exchange identifier.</param>
         /// <param name="queueId">The identifier.</param>
-        void CreateQueue(string exchangeId, string queueId);
+        /// <param name="exchangeType">Type of the exchange.</param>
+        void CreateQueue(string exchangeId, string queueId, string exchangeType);
 
         /// <summary>
         /// Removes the queue.

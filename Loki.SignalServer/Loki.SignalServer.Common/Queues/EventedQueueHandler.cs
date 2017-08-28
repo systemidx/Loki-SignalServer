@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
+using Dapper;
 using Loki.Interfaces.Dependency;
 using Loki.Interfaces.Logging;
 using Loki.Interfaces.Threading;
@@ -10,6 +11,7 @@ using Loki.SignalServer.Common.Queues.InMemory;
 using Loki.SignalServer.Common.Queues.RabbitMq;
 using Loki.SignalServer.Interfaces.Configuration;
 using Loki.SignalServer.Interfaces.Queues;
+using RabbitMQ.Client;
 
 namespace Loki.SignalServer.Common.Queues
 {
@@ -31,12 +33,7 @@ namespace Loki.SignalServer.Common.Queues
         /// The queues
         /// </summary>
         private readonly ConcurrentDictionary<string, IEventedQueue<T>> _queues = new ConcurrentDictionary<string, IEventedQueue<T>>();
-
-        /// <summary>
-        /// The queue generators
-        /// </summary>
-        private readonly Dictionary<QueueService,Func<string, string, IEventedQueue<T>>> _queueGenerators = new Dictionary<QueueService, Func<string, string, IEventedQueue<T>>>();
-
+        
         #endregion
 
         #region Private Variables
@@ -89,14 +86,13 @@ namespace Loki.SignalServer.Common.Queues
         public EventedQueueHandler(IDependencyUtility dependencyUtility)
         {
             _dependencyUtility = dependencyUtility;
-
-            CreateQueueGenerators();
         }
 
         #endregion
 
         #region Public Methods
 
+        /// <inheritdoc />
         /// <summary>
         /// Starts this instance.
         /// </summary>
@@ -112,6 +108,7 @@ namespace Loki.SignalServer.Common.Queues
             _processingThread = _threadHelper.CreateAndRun(Process);
         }
 
+        /// <inheritdoc />
         /// <summary>
         /// Stops this instance.
         /// </summary>
@@ -125,15 +122,28 @@ namespace Loki.SignalServer.Common.Queues
         /// </summary>
         /// <param name="exchangeId">The exchange identifier.</param>
         /// <param name="queueId">The identifier.</param>
-        /// <exception cref="ArgumentException">key</exception>
-        public void CreateQueue(string exchangeId, string queueId)
+        /// <param name="exchangeType">Type of the exchange.</param>
+        /// <exception cref="T:System.ArgumentException">key</exception>
+        public void CreateQueue(string exchangeId, string queueId, string exchangeType = ExchangeType.Direct)
         {
             string key = GetKey(exchangeId, queueId);
 
             if (_queues.ContainsKey(key))
                 return;
 
-            _queues[key] = _queueGenerators[this._queueService].Invoke(exchangeId, queueId);
+            switch (_queueService)
+            {
+                case QueueService.InMemory:
+                    _queues[key] = new InMemoryEventedQueue<T>();
+                    break;
+
+                case QueueService.RabbitMq:
+                    _queues[key] = new RabbitEventedQueue<T>(exchangeId, queueId, _dependencyUtility, exchangeType);
+                    break;
+
+                default:
+                    throw new InvalidOperationException(nameof(CreateQueue));
+            }
         }
 
         /// <summary>
@@ -206,22 +216,13 @@ namespace Loki.SignalServer.Common.Queues
         #endregion
 
         #region Helper Methods
-
-        /// <summary>
-        /// Creates the queue generators.
-        /// </summary>
-        private void CreateQueueGenerators()
-        {
-            _queueGenerators[QueueService.InMemory] = (exchangeId, queueId) => new InMemoryEventedQueue<T>();
-            _queueGenerators[QueueService.RabbitMq] = (exchangeId, queueId) => new RabbitEventedQueue<T>(exchangeId, queueId, _dependencyUtility);
-        }
-
+        
         /// <summary>
         /// Gets the key.
         /// </summary>
         /// <param name="exchangeId">The exchange identifier.</param>
         /// <param name="queueId">The queue identifier.</param>
-        /// <returns></returns>
+        /// <returns></returns> 
         private string GetKey(string exchangeId, string queueId)
         {
             return $"{exchangeId}/{queueId}";

@@ -93,9 +93,7 @@ namespace Loki.SignalServer.Routes
 
             try
             {
-                ISignal response = _signalRouter.Route(signal);
-                if (response != null)
-                    sender.SendText(response);
+                _signalRouter.Route(signal);
             }
             catch (InvalidExtensionException ex)
             {
@@ -126,7 +124,8 @@ namespace Loki.SignalServer.Routes
         /// <param name="sender">The sender.</param>
         private void UnregisterInExtensions(IWebSocketConnection sender)
         {
-            
+            foreach (IExtension extension in _extensionLoader.Extensions)
+                extension.UnregisterConnection(sender);
         }
 
         /// <summary>

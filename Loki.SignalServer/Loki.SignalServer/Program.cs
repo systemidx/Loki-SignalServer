@@ -29,12 +29,14 @@ namespace Loki.SignalServer
         private const string PORT_CONFIGURATION_KEY = "port";
         private const string PFX_PATH_CONFIGURATION_KEY = "pfx:path";
         private const string PFX_KEY_CONFIGURATION_KEY = "pfx:key";
+        private const string LOG_LEVEL_CONFIGURATION_KEY = "log-level";
 
         private static IServer _server;
         private static IDependencyUtility _dependencyUtility;
         private static IConfigurationHandler _config;
         private static ILogger _logger;
         private static IEventedQueueHandler<ISignal> _queueHandler;
+        private static ISignalRouter _router;
 
         static void Main(string[] args)
         {
@@ -59,6 +61,7 @@ namespace Loki.SignalServer
             {
                 _logger.Info($"Listening on {host}:{port}");
                 
+                //Initialize the router
                 _router.Initialize();
 
                 //Disable Nagle's Algorithm
@@ -102,6 +105,7 @@ namespace Loki.SignalServer
         private static void HandleQueueHandler()
         {
             _queueHandler = new EventedQueueHandler<ISignal>(_dependencyUtility);
+
             _dependencyUtility.Register<IEventedQueueHandler<ISignal>>(_queueHandler);
         }
 
@@ -112,12 +116,11 @@ namespace Loki.SignalServer
             _logger.OnDebug += (sender, args) => Console.WriteLine($"[{args.EventTimeStamp}]\tDEBUG\t{args.Message}");
             _logger.OnWarn += (sender, args) => Console.WriteLine($"[{args.EventTimeStamp}]\tWARN\t{args.Message}");
             _logger.OnInfo += (sender, args) => Console.WriteLine($"[{args.EventTimeStamp}]\tINFO\t{args.Message}");
+            _logger.LogLevel = _config.Get<LogLevel>(LOG_LEVEL_CONFIGURATION_KEY);
 
             _dependencyUtility.Register<ILogger>(_logger);
         }
-
-        private static ISignalRouter _router;
-
+        
         private static void HandleSignalRouter()
         {
             _router = new SignalRouter(_dependencyUtility);

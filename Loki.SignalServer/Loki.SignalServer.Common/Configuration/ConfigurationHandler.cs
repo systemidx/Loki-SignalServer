@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using Loki.SignalServer.Interfaces.Configuration;
+using Loki.SignalServer.Interfaces.Exceptions;
 using Microsoft.Extensions.Configuration;
 
 namespace Loki.SignalServer.Common.Configuration
@@ -54,6 +55,9 @@ namespace Loki.SignalServer.Common.Configuration
         /// <returns></returns>
         public T Get<T>(string key)
         {
+            if (string.IsNullOrEmpty(key))
+                throw new ConfigurationItemMissingException(nameof(key));
+
             string value = _configuration[key];
 
             Type type = typeof(T);
