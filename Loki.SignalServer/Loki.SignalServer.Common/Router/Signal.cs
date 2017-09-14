@@ -4,11 +4,11 @@ namespace Loki.SignalServer.Common.Router
 {
     public class Signal : ISignal
     {
-        private string _module;
+        private string _extension;
         private string _action;
         private string _route;
 
-        public string Extension => _module;
+        public string Extension => _extension;
         public string Action => _action;
 
         public string Sender { get; set; }
@@ -19,14 +19,14 @@ namespace Loki.SignalServer.Common.Router
             get => _route;
             set
             {
-                _route = value;
+                _route = value.ToLowerInvariant();
 
-                if (value == null || !value.Contains("/"))
+                if (!value.Contains("/"))
                     return;
 
                 string[] values = value.Split('/');
 
-                _module = values[0];
+                _extension = values[0];
 
                 if (values.Length == 2)
                     _action = values[1];

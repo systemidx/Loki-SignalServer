@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard1.6</TargetFramework>
-    <Version>1.0.0.4</Version>
+    <Version>1.0.0.5</Version>
     <Authors>Systemidx</Authors>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
@@ -16,6 +16,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Loki.Common" Version="1.0.1" />
+    <PackageReference Include="Loki.Interfaces" Version="1.0.1.8" />
+    <PackageReference Include="Loki.Server" Version="1.0.2.1" />
     <PackageReference Include="System.Runtime.Loader" Version="4.3.0" />
   </ItemGroup>
 

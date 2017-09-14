@@ -97,9 +97,9 @@ namespace Loki.SignalServer.Extensions
 
                     _extensionTypes.Add(type, name);
                 }
-                catch (ReflectionTypeLoadException ex)
+                catch (ReflectionTypeLoadException)
                 {
-                    _logger.Error(ex);
+                    //_logger.Error(ex);
                 }
             }
         }

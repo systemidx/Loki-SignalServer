@@ -191,7 +191,7 @@ namespace Loki.SignalServer.Common.Queues
             string key = GetKey(exchangeId, queueId);
 
             if (!_queues.ContainsKey(key))
-                throw new ArgumentException(nameof(key));
+                return;
 
             _queues[key].Dequeued -= eventHandler;
         }

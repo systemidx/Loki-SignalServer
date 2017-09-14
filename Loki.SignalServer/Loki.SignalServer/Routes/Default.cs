@@ -98,7 +98,6 @@ namespace Loki.SignalServer.Routes
             catch (InvalidExtensionException ex)
             {
                 Logger.Error(ex);
-                throw;
             }
 
             base.OnText(sender, args);
@@ -136,16 +135,22 @@ namespace Loki.SignalServer.Routes
         /// <returns></returns>
         private bool Authenticate(IWebSocketConnection sender, ConnectionOpenedEventArgs args)
         {
+            string userDomainId = args.Querystrings["userdomainid"];
+            string userId = args.Querystrings["userid"];
+            string token = args.Querystrings["token"];
+
             //Make sure that we have an ID in the querystring
-            if (string.IsNullOrWhiteSpace(args.Querystrings["id"]))
+            if (string.IsNullOrWhiteSpace(userDomainId) || string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(token))
             {
                 sender.Close();
                 return false;
             }
 
             //Assign it to the client identifier
-            sender.ClientIdentifier = args.Querystrings["id"];
-            
+            sender.ClientIdentifier = $"{userId}";
+            sender.Metadata["token"] = token;
+            sender.Metadata["domainId"] = userDomainId;
+
             return true;
         }
 

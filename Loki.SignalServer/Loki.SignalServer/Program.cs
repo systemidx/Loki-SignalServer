@@ -8,6 +8,7 @@ using Loki.Interfaces;
 using Loki.Interfaces.Dependency;
 using Loki.Interfaces.Logging;
 using Loki.Interfaces.Security;
+using Loki.Server;
 using Loki.Server.Dependency;
 using Loki.Server.Logging;
 using Loki.Server.Security;
@@ -25,10 +26,10 @@ namespace Loki.SignalServer
 {
     class Program
     {
-        private const string HOST_CONFIGURATION_KEY = "host";
-        private const string PORT_CONFIGURATION_KEY = "port";
-        private const string PFX_PATH_CONFIGURATION_KEY = "pfx:path";
-        private const string PFX_KEY_CONFIGURATION_KEY = "pfx:key";
+        private const string HOST_CONFIGURATION_KEY = "connection:host";
+        private const string PORT_CONFIGURATION_KEY = "connection:port";
+        private const string PFX_PATH_CONFIGURATION_KEY = "connection:pfx:path";
+        private const string PFX_KEY_CONFIGURATION_KEY = "connection:pfx:key";
         private const string LOG_LEVEL_CONFIGURATION_KEY = "log-level";
 
         private static IServer _server;
@@ -57,7 +58,7 @@ namespace Loki.SignalServer
             AssemblyLoadContext.Default.Unloading += UnloadServer;
 
             //Start the server
-            using (_server = new Server.Server("MyServerName", host, port, _dependencyUtility))
+            using (_server = new WebSocketServer("MyServerName", host, port, _dependencyUtility, 4))
             {
                 _logger.Info($"Listening on {host}:{port}");
                 
@@ -78,6 +79,7 @@ namespace Loki.SignalServer
         private static void UnloadServer(AssemblyLoadContext assemblyLoadContext)
         {
             _server?.Stop();
+
             Environment.Exit(0);
         }
 
@@ -97,8 +99,10 @@ namespace Loki.SignalServer
             if (!File.Exists(pfxPath))
                 return;
 
-            X509Certificate2 certificate = new X509Certificate2(pfxPath, _config.Get(PFX_KEY_CONFIGURATION_KEY));
-
+            X509Certificate2 certificate = null;
+#if RELEASE
+            certificate = new X509Certificate2(pfxPath, _config.Get(PFX_KEY_CONFIGURATION_KEY));
+#endif
             _dependencyUtility.Register<ISecurityContainer>(new SecurityContainer(certificate, SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false, true, true));
         }
 

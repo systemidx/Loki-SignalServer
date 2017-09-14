@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26430.16
+VisualStudioVersion = 15.0.26730.15
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Loki.SignalServer", "Loki.SignalServer\Loki.SignalServer.csproj", "{1561A027-E2A7-4860-8E3A-E1DB0CD09C99}"
 EndProject
@@ -13,7 +13,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Loki.SignalServer.Extension
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Loki.SignalServer.UnitTests", "Loki.SignalServer.UnitTests\Loki.SignalServer.UnitTests.csproj", "{5DF49716-8F54-4F97-AAA9-4AE161F7AAB9}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Loki.SignalServer.Common", "Loki.SignalServer.Common\Loki.SignalServer.Common.csproj", "{070C9C6D-02B2-491B-B233-EE04B01BB0C5}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Loki.SignalServer.Common", "Loki.SignalServer.Common\Loki.SignalServer.Common.csproj", "{070C9C6D-02B2-491B-B233-EE04B01BB0C5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -48,5 +48,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {BD93D9E6-DA51-471A-90F6-53DF79471A06}
 	EndGlobalSection
 EndGlobal

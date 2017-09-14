@@ -114,7 +114,7 @@ namespace Loki.SignalServer.Common.Queues.RabbitMq
         /// <param name="durable">if set to <c>true</c> [durable].</param>
         /// <param name="transient">if set to <c>true</c> [transient].</param>
         /// <param name="autoDelete">if set to <c>true</c> [automatic delete].</param>
-        public RabbitEventedQueue(string exchangeId, string queueId, IDependencyUtility dependencyUtility, string exchangeType = ExchangeType.Direct, string routeKey = "", bool durable = false, bool transient = true, bool autoDelete = true)
+        public RabbitEventedQueue(string exchangeId, string queueId, IDependencyUtility dependencyUtility, string exchangeType = ExchangeType.Direct, string routeKey = "", bool durable = true, bool transient = false, bool autoDelete = false)
         {
             _logger = dependencyUtility.Resolve<ILogger>();
             _jss = dependencyUtility.Resolve<JsonSerializerSettings>();
