@@ -25,40 +25,7 @@ namespace Loki.SignalServer.Interfaces.Queues
         /// <summary>
         /// Creates the queue.
         /// </summary>
-        /// <param name="exchangeId">The exchange identifier.</param>
-        /// <param name="queueId">The identifier.</param>
-        /// <param name="exchangeType">Type of the exchange.</param>
-        void CreateQueue(string exchangeId, string queueId, string exchangeType);
-
-        /// <summary>
-        /// Removes the queue.
-        /// </summary>
-        /// <param name="exchangeId">The exchange identifier.</param>
-        /// <param name="queueId">The queue identifier.</param>
-        void RemoveQueue(string exchangeId, string queueId);
-
-        /// <summary>
-        /// Adds the event.
-        /// </summary>
-        /// <param name="exchangeId">The exchange identifier.</param>
-        /// <param name="queueId">The queue identifier.</param>
-        /// <param name="eventHandler">The event handler.</param>
-        void AddEvent(string exchangeId, string queueId, EventHandler<T> eventHandler);
-
-        /// <summary>
-        /// Removes the event.
-        /// </summary>
-        /// <param name="exchangeId">The exchange identifier.</param>
-        /// <param name="queueId">The queue identifier.</param>
-        /// <param name="eventHandler">The event handler.</param>
-        void RemoveEvent(string exchangeId, string queueId, EventHandler<T> eventHandler);
-
-        /// <summary>
-        /// Enqueues the specified queue identifier.
-        /// </summary>
-        /// <param name="exchangeId">The exchange identifier.</param>
-        /// <param name="queueId">The queue identifier.</param>
-        /// <param name="obj">The object.</param>
-        void Enqueue(string exchangeId, string queueId, T obj);
+        /// <param name="parameters">The parameters.</param>
+        IEventedQueue<T> CreateQueue(IEventedQueueParameters parameters);
     }
 }

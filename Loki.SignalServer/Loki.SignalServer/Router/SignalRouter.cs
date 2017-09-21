@@ -63,25 +63,15 @@ namespace Loki.SignalServer.Router
         private IWebSocketConnectionManager _connectionManager;
 
         /// <summary>
-        /// The incoming signal exchange identifier
+        /// The request queue
         /// </summary>
-        private string _incomingSignalExchangeId;
+        private IEventedQueue<ISignal> _requestQueue;
 
         /// <summary>
-        /// The incoming signal queue identifier
+        /// The response queue
         /// </summary>
-        private string _incomingSignalQueueId;
-
-        /// <summary>
-        /// The outgoing signal exchange identifier
-        /// </summary>
-        private string _outgoingSignalExchangeId;
-
-        /// <summary>
-        /// The outgoing signal queue identifier
-        /// </summary>
-        private string _outgoingSignalQueueId;
-
+        private IEventedQueue<ISignal> _responseQueue;
+        
         /// <summary>
         /// Initialization flag
         /// </summary>
@@ -123,24 +113,15 @@ namespace Loki.SignalServer.Router
 
             if (_queueHandler == null)
                 _queueHandler = new EventedQueueHandler<ISignal>(_dependencyUtility);
-            
-            _incomingSignalExchangeId = _config.Get(CONFIGURATION_KEY_EXCHANGE_INCOMING);
-            _outgoingSignalExchangeId = _config.Get(CONFIGURATION_KEY_EXCHANGE_OUTGOING);
-            _incomingSignalQueueId = _config.Get(CONFIGURATION_KEY_QUEUE_INCOMING);
-            _outgoingSignalQueueId = _config.Get(CONFIGURATION_KEY_QUEUE_OUTGOING);
 
             _queueHandler.Start();
 
-            _queueHandler.CreateQueue(_incomingSignalExchangeId, _incomingSignalQueueId, ExchangeType.Fanout);
-            _queueHandler.CreateQueue(_outgoingSignalExchangeId, _outgoingSignalQueueId, ExchangeType.Fanout);
-
-            _queueHandler.AddEvent(_incomingSignalExchangeId, _incomingSignalQueueId, HandleRequest);
-            _queueHandler.AddEvent(_outgoingSignalExchangeId, _outgoingSignalQueueId, HandleResponse);
+            CreateRequestQueue();
+            CreateResponseQueue();
 
             _isInitialized = true;
         }
-
-
+        
         /// <summary>
         /// Routes the specified signal.
         /// </summary>
@@ -150,7 +131,7 @@ namespace Loki.SignalServer.Router
             if (!_isInitialized)
                 throw new DependencyNotInitException(nameof(SignalRouter));
 
-            _queueHandler.Enqueue(_incomingSignalExchangeId, _incomingSignalQueueId, signal);
+            _requestQueue.Enqueue(signal);
         }
 
         /// <summary>
@@ -182,6 +163,43 @@ namespace Loki.SignalServer.Router
         #endregion
 
         #region Private Methods
+
+
+        /// <summary>
+        /// Creates the request queue.
+        /// </summary>
+        private void CreateRequestQueue()
+        {
+            IEventedQueueParameters requestQueueParameters = new EventedQueueParameters();
+            requestQueueParameters["ExchangeId"] = _config.Get(CONFIGURATION_KEY_EXCHANGE_INCOMING);
+            requestQueueParameters["ExchangeType"] = ExchangeType.Fanout;
+            requestQueueParameters["QueueId"] = _config.Get(CONFIGURATION_KEY_QUEUE_INCOMING);
+            requestQueueParameters["RouteKey"] = "";
+            requestQueueParameters["Durable"] = true;
+            requestQueueParameters["Transient"] = false;
+            requestQueueParameters["AutoDelete"] = true;
+
+            _requestQueue = _queueHandler.CreateQueue(requestQueueParameters);
+            _requestQueue.Dequeued += HandleRequest;
+        }
+
+        /// <summary>
+        /// Creates the response queue.
+        /// </summary>
+        private void CreateResponseQueue()
+        {
+            IEventedQueueParameters responseQueueParameters = new EventedQueueParameters();
+            responseQueueParameters["ExchangeId"] = _config.Get(CONFIGURATION_KEY_EXCHANGE_OUTGOING);
+            responseQueueParameters["ExchangeType"] = ExchangeType.Fanout;
+            responseQueueParameters["QueueId"] = _config.Get(CONFIGURATION_KEY_QUEUE_OUTGOING);
+            responseQueueParameters["RouteKey"] = "";
+            responseQueueParameters["Durable"] = true;
+            responseQueueParameters["Transient"] = false;
+            responseQueueParameters["AutoDelete"] = true;
+
+            _responseQueue = _queueHandler.CreateQueue(responseQueueParameters);
+            _responseQueue.Dequeued += HandleResponse;
+        }
 
         /// <summary>
         /// Gets the extension.
@@ -241,6 +259,10 @@ namespace Loki.SignalServer.Router
             if (extension == null)
                 throw new InvalidExtensionException($"Attempted to route an to an invalid extension. Route: {signal.Route}");
 
+            IWebSocketConnection[] connections = _connectionManager.GetConnectionsByClientIdentifier(signal.Sender);
+            if (!connections.Any())
+                return;
+
             _logger.Debug($"Request: {JsonConvert.SerializeObject(signal)}");
 
             ISignal response = extension.ExecuteAction(signal.Action, signal);
@@ -250,7 +272,7 @@ namespace Loki.SignalServer.Router
 
             _logger.Debug($"Response: {JsonConvert.SerializeObject(response)}");
 
-            _queueHandler.Enqueue(_outgoingSignalExchangeId, _outgoingSignalQueueId, response);
+            _responseQueue.Enqueue(signal);
         }
 
         #endregion

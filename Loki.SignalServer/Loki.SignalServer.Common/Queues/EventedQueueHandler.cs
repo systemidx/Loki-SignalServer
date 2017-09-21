@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Threading;
-using Dapper;
 using Loki.Interfaces.Dependency;
 using Loki.Interfaces.Logging;
 using Loki.Interfaces.Threading;
@@ -11,7 +9,6 @@ using Loki.SignalServer.Common.Queues.InMemory;
 using Loki.SignalServer.Common.Queues.RabbitMq;
 using Loki.SignalServer.Interfaces.Configuration;
 using Loki.SignalServer.Interfaces.Queues;
-using RabbitMQ.Client;
 
 namespace Loki.SignalServer.Common.Queues
 {
@@ -120,16 +117,16 @@ namespace Loki.SignalServer.Common.Queues
         /// <summary>
         /// Creates the queue.
         /// </summary>
-        /// <param name="exchangeId">The exchange identifier.</param>
-        /// <param name="queueId">The identifier.</param>
-        /// <param name="exchangeType">Type of the exchange.</param>
+        /// <param name="parameters">The parameters.</param>
+        /// <returns></returns>
+        /// <exception cref="InvalidOperationException">CreateQueue</exception>
         /// <exception cref="T:System.ArgumentException">key</exception>
-        public void CreateQueue(string exchangeId, string queueId, string exchangeType = ExchangeType.Direct)
+        public IEventedQueue<T> CreateQueue(IEventedQueueParameters parameters)
         {
-            string key = GetKey(exchangeId, queueId);
+            string key = GetKey(parameters);
 
             if (_queues.ContainsKey(key))
-                return;
+                return _queues[key];
 
             switch (_queueService)
             {
@@ -138,12 +135,14 @@ namespace Loki.SignalServer.Common.Queues
                     break;
 
                 case QueueService.RabbitMq:
-                    _queues[key] = new RabbitEventedQueue<T>(exchangeId, queueId, _dependencyUtility, exchangeType);
+                    _queues[key] = new RabbitEventedQueue<T>(_dependencyUtility, parameters);
                     break;
 
                 default:
                     throw new InvalidOperationException(nameof(CreateQueue));
             }
+
+            return _queues[key];
         }
 
         /// <summary>
@@ -199,15 +198,14 @@ namespace Loki.SignalServer.Common.Queues
         /// <summary>
         /// Enqueues the specified queue identifier.
         /// </summary>
-        /// <param name="exchangeId">The exchange identifier.</param>
-        /// <param name="queueId">The queue identifier.</param>
+        /// <param name="parameters">The parameters.</param>
         /// <param name="obj">The object.</param>
-        public void Enqueue(string exchangeId, string queueId, T obj)
+        public void Enqueue(IEventedQueueParameters parameters, T obj)
         {
-            string key = GetKey(exchangeId, queueId);
+            string key = GetKey(parameters);
 
             if (!_queues.ContainsKey(key))
-                CreateQueue(exchangeId, queueId);
+                CreateQueue(parameters);
 
             _queues[key].Enqueue(obj);
             _queuesToProcess.Enqueue(key);
@@ -216,13 +214,26 @@ namespace Loki.SignalServer.Common.Queues
         #endregion
 
         #region Helper Methods
-        
+
+        /// <summary>
+        /// Gets the key.
+        /// </summary>
+        /// <param name="parameters">The parameters.</param>
+        /// <returns></returns>
+        private string GetKey(IEventedQueueParameters parameters)
+        {
+            string exchangeId = parameters["ExchangeId"];
+            string queueId = parameters["QueueId"];
+
+            return GetKey(exchangeId, queueId);
+        }
+
         /// <summary>
         /// Gets the key.
         /// </summary>
         /// <param name="exchangeId">The exchange identifier.</param>
         /// <param name="queueId">The queue identifier.</param>
-        /// <returns></returns> 
+        /// <returns></returns>
         private string GetKey(string exchangeId, string queueId)
         {
             return $"{exchangeId}/{queueId}";

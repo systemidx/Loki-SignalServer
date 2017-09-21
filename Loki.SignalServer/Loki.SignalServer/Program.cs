@@ -12,10 +12,12 @@ using Loki.Server;
 using Loki.Server.Dependency;
 using Loki.Server.Logging;
 using Loki.Server.Security;
+using Loki.SignalServer.Common.Cache;
 using Loki.SignalServer.Common.Configuration;
 using Loki.SignalServer.Common.Queues;
 using Loki.SignalServer.Extensions;
 using Loki.SignalServer.Extensions.Interfaces;
+using Loki.SignalServer.Interfaces.Cache;
 using Loki.SignalServer.Interfaces.Configuration;
 using Loki.SignalServer.Interfaces.Queues;
 using Loki.SignalServer.Interfaces.Router;
@@ -37,12 +39,14 @@ namespace Loki.SignalServer
         private static IConfigurationHandler _config;
         private static ILogger _logger;
         private static IEventedQueueHandler<ISignal> _queueHandler;
+        private static ICacheHandler _cacheHandler;
         private static ISignalRouter _router;
 
         static void Main(string[] args)
         {
             _dependencyUtility = new DependencyUtility();
 
+            HandleCacheHandler();
             HandleConfiguration();
             HandleSecurityContainer();
             HandleLogger();
@@ -56,6 +60,7 @@ namespace Loki.SignalServer
 
             //Hook into our closing event
             AssemblyLoadContext.Default.Unloading += UnloadServer;
+            Console.CancelKeyPress += (sender, eventArgs) => UnloadServer(AssemblyLoadContext.Default);
 
             //Start the server
             using (_server = new WebSocketServer("MyServerName", host, port, _dependencyUtility, 4))
@@ -72,10 +77,16 @@ namespace Loki.SignalServer
                 _queueHandler.Start();
 
                 //Start listening and blocking the main thread
-                _server.Run();
+                _server.Run(false);
+
+                Console.ReadLine();
             }
         }
-        
+
+        /// <summary>
+        /// Unloads the server.
+        /// </summary>
+        /// <param name="assemblyLoadContext">The assembly load context.</param>
         private static void UnloadServer(AssemblyLoadContext assemblyLoadContext)
         {
             _server?.Stop();
@@ -83,6 +94,9 @@ namespace Loki.SignalServer
             Environment.Exit(0);
         }
 
+        /// <summary>
+        /// Handles the configuration.
+        /// </summary>
         private static void HandleConfiguration()
         {
             _config = new ConfigurationHandler("configuration.json");
@@ -93,6 +107,9 @@ namespace Loki.SignalServer
             _dependencyUtility.Register<IConfigurationHandler>(_config);
         }
 
+        /// <summary>
+        /// Handles the security container.
+        /// </summary>
         private static void HandleSecurityContainer()
         {
             string pfxPath = _config.Get(PFX_PATH_CONFIGURATION_KEY);
@@ -104,6 +121,16 @@ namespace Loki.SignalServer
             certificate = new X509Certificate2(pfxPath, _config.Get(PFX_KEY_CONFIGURATION_KEY));
 #endif
             _dependencyUtility.Register<ISecurityContainer>(new SecurityContainer(certificate, SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false, true, true));
+        }
+
+        /// <summary>
+        /// Handles the cache handler.
+        /// </summary>
+        private static void HandleCacheHandler()
+        {
+            _cacheHandler = new CacheHandler(_dependencyUtility);
+
+            _dependencyUtility.Register<ICacheHandler>(_cacheHandler);
         }
 
         private static void HandleQueueHandler()

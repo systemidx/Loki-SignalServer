@@ -217,6 +217,7 @@ namespace Loki.SignalServer.Extensions
             do
             {
                 cache?.TryGetValue(action.ToLowerInvariant(), out func);
+                ++i;
             } while (func == null && i < 3);
 
             if (func == null)

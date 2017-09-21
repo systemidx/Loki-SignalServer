@@ -85,7 +85,16 @@ namespace Loki.SignalServer.Extensions
 
             foreach (FileInfo dll in dlls)
             {
-                Assembly asm = AssemblyLoadContext.Default.LoadFromAssemblyPath(dll.FullName);
+                Assembly asm;
+
+                try
+                {
+                    asm = AssemblyLoadContext.Default.LoadFromAssemblyPath(dll.FullName);
+                }
+                catch (FileLoadException)
+                {
+                    continue;
+                }
 
                 _logger.Debug($"Loading assembly: {asm.FullName}");
 
@@ -99,7 +108,6 @@ namespace Loki.SignalServer.Extensions
                 }
                 catch (ReflectionTypeLoadException)
                 {
-                    //_logger.Error(ex);
                 }
             }
         }

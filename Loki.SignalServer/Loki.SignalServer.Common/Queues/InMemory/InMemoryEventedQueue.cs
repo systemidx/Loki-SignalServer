@@ -10,6 +10,7 @@ namespace Loki.SignalServer.Common.Queues.InMemory
 
         public int Count => _backingQueue.Count;
         public bool CanDequeue => true;
+        public IEventedQueueParameters Parameters { get; set; }
 
         public event EventHandler<T> Dequeued;
         
