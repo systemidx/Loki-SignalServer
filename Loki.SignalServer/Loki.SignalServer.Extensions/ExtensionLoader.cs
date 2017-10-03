@@ -109,6 +109,8 @@ namespace Loki.SignalServer.Extensions
                 if (extension == null)
                     throw new InvalidExtensionException(extensionType.Value, extensionType.Key.AssemblyQualifiedName);
 
+                extension.Initialize();
+
                 extensions.Add(extension);
             }
             
