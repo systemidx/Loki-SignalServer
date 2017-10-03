@@ -33,7 +33,16 @@ namespace Loki.SignalServer.Common.Cache.Redis
 
         public T Get<T>(string key) where T : class
         {
-            string value = _cache.StringGet(key);
+            string value = null;
+
+            try
+            {
+                value = _cache.StringGet(key);
+            }
+            catch (RedisTimeoutException ex)
+            {
+                _logger.Error(ex);
+            }
 
             if (value == null)
                 return null;

@@ -78,7 +78,7 @@ namespace Loki.SignalServer.Common.Queues.RabbitMq
         /// <value>
         /// The routing key.
         /// </value>
-        private string RoutingKey => Parameters["RoutingKey"];
+        private string RoutingKey => Parameters["RouteKey"];
 
         #endregion
 
@@ -93,11 +93,6 @@ namespace Loki.SignalServer.Common.Queues.RabbitMq
         /// The Json Serializer Settings
         /// </summary>
         private readonly JsonSerializerSettings _jss;
-
-        /// <summary>
-        /// The parameters
-        /// </summary>
-        private readonly IEventedQueueParameters _parameters;
 
         #region RabbitMQ Variables
 
@@ -129,21 +124,29 @@ namespace Loki.SignalServer.Common.Queues.RabbitMq
         /// <summary>
         /// Initializes a new instance of the <see cref="RabbitEventedQueue{T}" /> class.
         /// </summary>
-        //public RabbitEventedQueue(string exchangeId, string queueId, IDependencyUtility dependencyUtility, string exchangeType = ExchangeType.Direct, string routeKey = "", bool durable = true, bool transient = false, bool autoDelete = false)
         public RabbitEventedQueue(IDependencyUtility dependencyUtility, IEventedQueueParameters parameters)
         {
-            _parameters = parameters;
+            Parameters = parameters;
+
             _logger = dependencyUtility.Resolve<ILogger>();
             _jss = dependencyUtility.Resolve<JsonSerializerSettings>();
 
+            string host = Parameters["Host"];
+            string vHost = Parameters["VirtualHost"];
+            string username = Parameters["Username"];
+            string password = Parameters["Password"];
+
             string exchangeId = parameters["ExchangeId"];
             string exchangeType = parameters["ExchangeType"];
+            bool exchangeDurable = parameters["ExchangeDurable"] ?? false;
+            bool exchangeAutoDelete = parameters["ExchangeAutoDelete"] ?? false;
+
             string queueId = parameters["QueueId"];
             string routingKey = parameters["RouteKey"];
 
-            bool durable = parameters["Durable"];
-            bool transient = parameters["Transient"];
-            bool autoDelete = parameters["AutoDelete"];
+            bool queueDurable = parameters["Durable"];
+            bool queueTransient = parameters["Transient"];
+            bool queueAutoDelete = parameters["AutoDelete"];
 
             IConfigurationHandler config = dependencyUtility.Resolve<IConfigurationHandler>();
             
@@ -174,8 +177,8 @@ namespace Loki.SignalServer.Common.Queues.RabbitMq
             lock (_channelLock)
             { 
                 _channel = connection.CreateModel();
-                _channel.ExchangeDeclare(exchangeId, exchangeType);
-                _channel.QueueDeclare(queueId, durable, transient, autoDelete, null);
+                _channel.ExchangeDeclare(exchangeId, exchangeType, exchangeDurable, exchangeAutoDelete);
+                _channel.QueueDeclare(queueId, queueDurable, queueTransient, queueAutoDelete, null);
                 _channel.QueueBind(queueId, exchangeId, routingKey);
 
                 EventingBasicConsumer consumer = new EventingBasicConsumer(_channel);

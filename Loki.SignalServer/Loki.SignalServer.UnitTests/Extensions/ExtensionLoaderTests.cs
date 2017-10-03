@@ -44,7 +44,7 @@ namespace Loki.SignalServer.UnitTests.Extensions
 
             File.WriteAllText(path, json, Encoding.UTF8);
             
-            return new ConfigurationHandler(path);
+            return new ConfigurationHandler(null, path);
         }
     }
 }

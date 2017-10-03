@@ -4,7 +4,7 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
-    <Version>1.0.1</Version>
+    <Version>1.0.3</Version>
     <Authors>Systemidx</Authors>
     <Company>Systemidx</Company>
     <Description>The common library for the Loki WebSocket Signaling Server</Description>
@@ -13,8 +13,8 @@
     <PackageProjectUrl>https://github.com/systemidx/Loki.SignalServer/</PackageProjectUrl>
     <RepositoryUrl>https://github.com/systemidx/Loki.SignalServer/</RepositoryUrl>
     <PackageTags>Loki WebSocket WebSocketServer NET csharp ws wss signaling chat</PackageTags>
-    <AssemblyVersion>1.0.1.0</AssemblyVersion>
-    <FileVersion>1.0.1.0</FileVersion>
+    <AssemblyVersion>1.0.3.0</AssemblyVersion>
+    <FileVersion>1.0.2.0</FileVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
@@ -26,7 +26,7 @@
     <PackageReference Include="Loki.Interfaces" Version="1.0.1.8" />
     <PackageReference Include="Loki.Server" Version="1.0.2.1" />
     <PackageReference Include="Dapper" Version="1.50.2" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="1.1.2" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="2.0.0" />
     <PackageReference Include="RabbitMQ.Client" Version="5.0.1" />
     <PackageReference Include="StackExchange.Redis" Version="1.2.6" />
     <PackageReference Include="WindowsAzure.Storage" Version="8.4.0" />

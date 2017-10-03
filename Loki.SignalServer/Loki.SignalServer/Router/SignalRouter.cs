@@ -1,9 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using Loki.Interfaces.Connections;
 using Loki.Interfaces.Dependency;
 using Loki.Interfaces.Logging;
 using Loki.SignalServer.Common.Queues;
+using Loki.SignalServer.Common.Router;
 using Loki.SignalServer.Extensions.Interfaces;
 using Loki.SignalServer.Interfaces.Configuration;
 using Loki.SignalServer.Interfaces.Exceptions;
@@ -35,8 +38,7 @@ namespace Loki.SignalServer.Router
         #endregion
 
         #region Private Variables
-
-
+        
         /// <summary>
         /// The extension loader
         /// </summary>
@@ -134,12 +136,13 @@ namespace Loki.SignalServer.Router
             _requestQueue.Enqueue(signal);
         }
 
+        /// <inheritdoc />
         /// <summary>
         /// Routes the specified signal from an extension to another extension.
         /// </summary>
         /// <param name="signal">The signal.</param>
         /// <returns></returns>
-        /// <exception cref="DependencyNotInitException">SignalRouter</exception>
+        /// <exception cref="T:Loki.SignalServer.Interfaces.Exceptions.DependencyNotInitException">SignalRouter</exception>
         public ISignal RouteExtension(ISignal signal)
         {
             if (!_isInitialized)
@@ -149,15 +152,62 @@ namespace Loki.SignalServer.Router
             if (extension == null)
                 throw new InvalidExtensionException($"Attempted to route an to an invalid extension. Route: {signal.Route}");    
 
-            _logger.Debug($"Cross Extension Request: {JsonConvert.SerializeObject(signal)}");
-
+            _logger.Debug(signal.Format("Cross Request"));
+            
             ISignal response = extension.ExecuteCrossExtensionAction(signal.Action, signal);
             if (response == null)
                 return null;
 
-            _logger.Debug($"Cross Extension Response: {JsonConvert.SerializeObject(response)}");
+            _logger.Debug(signal.Format("Cross Response"));
 
             return response;
+        }
+
+        /// <inheritdoc />
+        /// <summary>
+        /// Broadcasts the signal.
+        /// </summary>
+        /// <param name="entityId">The entity identifier.</param>
+        /// <param name="signal">The signal.</param>
+        /// <exception cref="T:Loki.SignalServer.Interfaces.Exceptions.DependencyNotInitException">SignalRouter</exception>
+        public void BroadcastSignal(string entityId, ISignal signal)
+        {
+            if (!_isInitialized)
+                throw new DependencyNotInitException(nameof(SignalRouter));
+
+            _logger.Debug(signal.Format("Direct Response"));
+
+            signal.Sender = "server";
+
+            //If on server, send signal
+            IWebSocketConnection[] connections = _connectionManager.GetConnectionsByClientIdentifier(entityId);
+
+            if (connections == null || connections.Length == 0)
+                return;
+
+            signal.Recipient = connections[0].ClientIdentifier;
+            foreach (IWebSocketConnection connection in connections)
+                connection?.SendText(signal);
+        }
+
+        /// <inheritdoc />
+        /// <summary>
+        /// Broadcasts the signal.
+        /// </summary>
+        /// <param name="entities">The entities.</param>
+        /// <param name="signal">The signal.</param>
+        /// <exception cref="T:Loki.SignalServer.Interfaces.Exceptions.DependencyNotInitException">SignalRouter</exception>
+        public void BroadcastSignal(IEnumerable<string> entities, ISignal signal)
+        {
+            if (!_isInitialized)
+                throw new DependencyNotInitException(nameof(SignalRouter));
+
+            _logger.Debug(signal.Format("Direct Response"));
+
+            signal.Sender = "server";
+            
+            foreach (string entityId in entities)
+                BroadcastSignal(entityId, signal);
         }
 
         #endregion
@@ -174,7 +224,7 @@ namespace Loki.SignalServer.Router
             requestQueueParameters["ExchangeId"] = _config.Get(CONFIGURATION_KEY_EXCHANGE_INCOMING);
             requestQueueParameters["ExchangeType"] = ExchangeType.Fanout;
             requestQueueParameters["QueueId"] = _config.Get(CONFIGURATION_KEY_QUEUE_INCOMING);
-            requestQueueParameters["RouteKey"] = "";
+            requestQueueParameters["RouteKey"] = "requestRouteKey";
             requestQueueParameters["Durable"] = true;
             requestQueueParameters["Transient"] = false;
             requestQueueParameters["AutoDelete"] = true;
@@ -192,7 +242,7 @@ namespace Loki.SignalServer.Router
             responseQueueParameters["ExchangeId"] = _config.Get(CONFIGURATION_KEY_EXCHANGE_OUTGOING);
             responseQueueParameters["ExchangeType"] = ExchangeType.Fanout;
             responseQueueParameters["QueueId"] = _config.Get(CONFIGURATION_KEY_QUEUE_OUTGOING);
-            responseQueueParameters["RouteKey"] = "";
+            responseQueueParameters["RouteKey"] = "responseRouteKey";
             responseQueueParameters["Durable"] = true;
             responseQueueParameters["Transient"] = false;
             responseQueueParameters["AutoDelete"] = true;
@@ -227,6 +277,9 @@ namespace Loki.SignalServer.Router
                 return null;
             }
 
+            if (!extension.IsInitialized)
+                throw new ExtensionNotInitializedException(nameof(extension));
+
             return extension;
         }
 
@@ -242,6 +295,8 @@ namespace Loki.SignalServer.Router
 
             if (!connections.Any())
                 return;
+
+            _logger.Debug(signal.Format("Response"));
 
             foreach (IWebSocketConnection connection in connections)
                 connection.SendText(signal);
@@ -263,17 +318,16 @@ namespace Loki.SignalServer.Router
             if (!connections.Any())
                 return;
 
-            _logger.Debug($"Request: {JsonConvert.SerializeObject(signal)}");
+            _logger.Debug(signal.Format("Request"));
 
             ISignal response = extension.ExecuteAction(signal.Action, signal);
 
             if (response == null)
                 return;
-
-            _logger.Debug($"Response: {JsonConvert.SerializeObject(response)}");
-
-            _responseQueue.Enqueue(signal);
+            
+            _responseQueue.Enqueue(response);
         }
+        
 
         #endregion
     }

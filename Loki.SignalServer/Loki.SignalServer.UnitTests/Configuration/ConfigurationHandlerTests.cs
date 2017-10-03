@@ -56,7 +56,7 @@ namespace Loki.SignalServer.UnitTests.Configuration
 
             File.WriteAllText(path, json, Encoding.UTF8);
 
-            IConfigurationHandler config = new ConfigurationHandler(path);
+            IConfigurationHandler config = new ConfigurationHandler(null, path);
 
             try
             {
@@ -155,7 +155,7 @@ namespace Loki.SignalServer.UnitTests.Configuration
         [Fact]
         public void ConfigurationHandlerThrowsExceptionForMissingFile()
         {
-            Assert.Throws(typeof(FileNotFoundException), () => new ConfigurationHandler(null));
+            Assert.Throws(typeof(FileNotFoundException), () => new ConfigurationHandler(null, null));
         }
 
         [Fact]

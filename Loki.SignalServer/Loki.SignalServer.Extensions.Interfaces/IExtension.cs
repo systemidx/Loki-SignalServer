@@ -15,6 +15,19 @@ namespace Loki.SignalServer.Extensions.Interfaces
         string Name { get; }
 
         /// <summary>
+        /// Gets a value indicating whether this instance is initialized.
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> if this instance is initialized; otherwise, <c>false</c>.
+        /// </value>
+        bool IsInitialized { get; }
+
+        /// <summary>
+        /// Initializes this instance.
+        /// </summary>
+        void Initialize();
+
+        /// <summary>
         /// Registers the action.
         /// </summary>
         /// <param name="action">The action.</param>
@@ -60,11 +73,12 @@ namespace Loki.SignalServer.Extensions.Interfaces
         /// Creates the response.
         /// </summary>
         /// <typeparam name="T"></typeparam>
-        /// <param name="request">The request.</param>
+        /// <param name="originalRequest">The request.</param>
         /// <param name="payload">The payload.</param>
+        /// <param name="newActionName"></param>
         /// <returns></returns>
-        ISignal CreateResponse<T>(ISignal request, T payload);
-
+        ISignal CreateResponse<T>(ISignal originalRequest, T payload, string newActionName = null);
+        
         /// <summary>
         /// Creates the cross extension request.
         /// </summary>

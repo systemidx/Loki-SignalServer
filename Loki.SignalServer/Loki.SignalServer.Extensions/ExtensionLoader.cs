@@ -15,15 +15,52 @@ namespace Loki.SignalServer.Extensions
 {
     public class ExtensionLoader : IExtensionLoader
     {
+        #region Constants
+
+        /// <summary>
+        /// The extension configuration key
+        /// </summary>
         private const string EXTENSION_CONFIGURATION_KEY = "extensions";
 
+        #endregion
+
+        #region Readonly Variables
+
+        /// <summary>
+        /// The dependency utility
+        /// </summary>
         private readonly IDependencyUtility _dependencyUtility;
+
+        /// <summary>
+        /// The logger
+        /// </summary>
         private readonly ILogger _logger;
+
+        /// <summary>
+        /// The configuration
+        /// </summary>
         private readonly IConfigurationHandler _config;
 
+        /// <summary>
+        /// The extension types
+        /// </summary>
         private readonly Dictionary<TypeInfo, string> _extensionTypes = new Dictionary<TypeInfo, string>();
 
+        #endregion
+
+        #region Properties
+
+        /// <summary>
+        /// Gets the extensions.
+        /// </summary>
+        /// <value>
+        /// The extensions.
+        /// </value>
         public HashSet<IExtension> Extensions { get; private set; }
+
+        #endregion
+
+        #region Constructor
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ExtensionLoader"/> class.
@@ -35,6 +72,10 @@ namespace Loki.SignalServer.Extensions
             _logger = _dependencyUtility.Resolve<ILogger>();
             _config = _dependencyUtility.Resolve<IConfigurationHandler>();
         }
+
+        #endregion
+
+        #region Public Methods
 
         /// <summary>
         /// Loads the extensions.
@@ -74,6 +115,10 @@ namespace Loki.SignalServer.Extensions
             Extensions = extensions;
         }
 
+        #endregion
+
+        #region Private Methods
+
         /// <summary>
         /// Loads the assembly.
         /// </summary>
@@ -111,5 +156,7 @@ namespace Loki.SignalServer.Extensions
                 }
             }
         }
+
+        #endregion
     }
 }

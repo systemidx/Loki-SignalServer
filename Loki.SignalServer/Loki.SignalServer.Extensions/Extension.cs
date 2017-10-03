@@ -58,6 +58,14 @@ namespace Loki.SignalServer.Extensions
         /// </value>
         public string Name { get; }
 
+        /// <summary>
+        /// Gets a value indicating whether this instance is initialized.
+        /// </summary>
+        /// <value>
+        /// <c>true</c> if this instance is initialized; otherwise, <c>false</c>.
+        /// </value>
+        public bool IsInitialized { get; private set; }
+
         #endregion
 
         #region Constructor
@@ -97,6 +105,11 @@ namespace Loki.SignalServer.Extensions
         #endregion
 
         #region Public Methods
+
+        public virtual void Initialize()
+        {
+            IsInitialized = true;
+        }
 
         /// <summary>
         /// Registers the action.
@@ -139,14 +152,15 @@ namespace Loki.SignalServer.Extensions
         /// <typeparam name="T"></typeparam>
         /// <param name="request">The request.</param>
         /// <param name="payload">The payload.</param>
+        /// <param name="newActionName"></param>
         /// <returns></returns>
-        public ISignal CreateResponse<T>(ISignal request, T payload)
+        public ISignal CreateResponse<T>(ISignal request, T payload, string newActionName = null)
         {
             string serializedPayload = JsonConvert.SerializeObject(payload);
 
             return new Signal
             {
-                Route = request.Route,
+                Route = newActionName == null ? request.Route : request.Extension + '/' + newActionName,
                 Sender = "server",
                 Recipient = request.Sender,
                 Payload = Encoding.UTF8.GetBytes(serializedPayload)
@@ -226,7 +240,18 @@ namespace Loki.SignalServer.Extensions
                 return null;
             }
 
-            return func.Invoke(signal);
+            ISignal response = null;
+            try
+            {
+                response = func.Invoke(signal);
+            }
+            catch (MissingMethodException ex)
+            {
+                Logger.Error(ex);
+                Logger.Warn("Please make sure you're using the latest libraries in your extensions.");
+            }
+
+            return response;
         }
 
         #endregion

@@ -99,7 +99,7 @@ namespace Loki.SignalServer
         /// </summary>
         private static void HandleConfiguration()
         {
-            _config = new ConfigurationHandler("configuration.json");
+            _config = new ConfigurationHandler(_dependencyUtility, "configuration.json");
 
             _dependencyUtility.Register<JsonSerializerSettings>(new JsonSerializerSettings {
                 TypeNameHandling = TypeNameHandling.All
@@ -133,6 +133,9 @@ namespace Loki.SignalServer
             _dependencyUtility.Register<ICacheHandler>(_cacheHandler);
         }
 
+        /// <summary>
+        /// Handles the queue handler.
+        /// </summary>
         private static void HandleQueueHandler()
         {
             _queueHandler = new EventedQueueHandler<ISignal>(_dependencyUtility);
@@ -140,6 +143,9 @@ namespace Loki.SignalServer
             _dependencyUtility.Register<IEventedQueueHandler<ISignal>>(_queueHandler);
         }
 
+        /// <summary>
+        /// Handles the logger.
+        /// </summary>
         private static void HandleLogger()
         {
             _logger = new Logger();
@@ -151,13 +157,19 @@ namespace Loki.SignalServer
 
             _dependencyUtility.Register<ILogger>(_logger);
         }
-        
+
+        /// <summary>
+        /// Handles the signal router.
+        /// </summary>
         private static void HandleSignalRouter()
         {
             _router = new SignalRouter(_dependencyUtility);
             _dependencyUtility.Register<ISignalRouter>(_router);
         }
 
+        /// <summary>
+        /// Handles the extension loader.
+        /// </summary>
         private static void HandleExtensionLoader()
         {
             IExtensionLoader extensionLoader = new ExtensionLoader(_dependencyUtility);
