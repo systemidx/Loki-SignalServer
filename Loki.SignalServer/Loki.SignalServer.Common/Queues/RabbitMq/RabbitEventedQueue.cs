@@ -135,9 +135,9 @@ namespace Loki.SignalServer.Common.Queues.RabbitMq
             string vHost = Parameters["VirtualHost"];
             string username = Parameters["Username"];
             string password = Parameters["Password"];
-
             string exchangeId = parameters["ExchangeId"];
             string exchangeType = parameters["ExchangeType"];
+
             bool exchangeDurable = parameters["ExchangeDurable"] ?? false;
             bool exchangeAutoDelete = parameters["ExchangeAutoDelete"] ?? false;
 
@@ -147,15 +147,13 @@ namespace Loki.SignalServer.Common.Queues.RabbitMq
             bool queueDurable = parameters["Durable"];
             bool queueTransient = parameters["Transient"];
             bool queueAutoDelete = parameters["AutoDelete"];
-
-            IConfigurationHandler config = dependencyUtility.Resolve<IConfigurationHandler>();
             
             IConnectionFactory factory = new ConnectionFactory
             {
-                UserName = config.Get("queue:username"),
-                Password = config.Get("queue:password"),
-                VirtualHost = config.Get("queue:vhost"),
-                Endpoint = new AmqpTcpEndpoint(config.Get("queue:host"))
+                UserName = username,
+                Password = password,
+                VirtualHost = vHost,
+                Endpoint = new AmqpTcpEndpoint(host)
             };
 
             IConnection connection;

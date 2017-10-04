@@ -22,9 +22,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Loki.Common" Version="1.0.1" />
-    <PackageReference Include="Loki.Interfaces" Version="1.0.1.8" />
-    <PackageReference Include="Loki.Server" Version="1.0.2.1" />
+    <ProjectReference Include="..\..\..\Loki\Loki.Common\Loki.Common.csproj" />
+    <ProjectReference Include="..\..\..\Loki\Loki.Interfaces\Loki.Interfaces.csproj" />
+    <ProjectReference Include="..\..\..\Loki\Loki.Server\Loki.Server.csproj" />
     <ProjectReference Include="..\Loki.SignalServer.Interfaces\Loki.SignalServer.Interfaces.csproj" />
   </ItemGroup>
 

@@ -22,9 +22,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Loki.Common" Version="1.0.1" />
-    <PackageReference Include="Loki.Interfaces" Version="1.0.1.8" />
-    <PackageReference Include="Loki.Server" Version="1.0.2.1" />
     <PackageReference Include="Dapper" Version="1.50.2" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="2.0.0" />
     <PackageReference Include="RabbitMQ.Client" Version="5.0.1" />
@@ -33,6 +30,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\Loki\Loki.Common\Loki.Common.csproj" />
+    <ProjectReference Include="..\..\..\Loki\Loki.Interfaces\Loki.Interfaces.csproj" />
+    <ProjectReference Include="..\..\..\Loki\Loki.Server\Loki.Server.csproj" />
     <ProjectReference Include="..\Loki.SignalServer.Interfaces\Loki.SignalServer.Interfaces.csproj" />
   </ItemGroup>
 

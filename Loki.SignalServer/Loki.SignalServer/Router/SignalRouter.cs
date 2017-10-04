@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using Loki.Interfaces.Connections;
 using Loki.Interfaces.Dependency;
 using Loki.Interfaces.Logging;
@@ -21,10 +20,14 @@ namespace Loki.SignalServer.Router
     {
         #region Constants
         
-        private const string CONFIGURATION_KEY_EXCHANGE_INCOMING = "cluster:exchange:requests";
-        private const string CONFIGURATION_KEY_EXCHANGE_OUTGOING = "cluster:exchange:responses";
-        private const string CONFIGURATION_KEY_QUEUE_INCOMING = "cluster:queue:requests";
-        private const string CONFIGURATION_KEY_QUEUE_OUTGOING = "cluster:queue:responses";
+        private const string CONFIGURATION_KEY_EXCHANGE_INCOMING = "router:exchange:requests";
+        private const string CONFIGURATION_KEY_EXCHANGE_OUTGOING = "router:exchange:responses";
+        private const string CONFIGURATION_KEY_QUEUE_INCOMING = "router:queue:queue-names:requests";
+        private const string CONFIGURATION_KEY_QUEUE_OUTGOING = "router:queue:queue-names:responses";
+        private const string CONFIGURATION_KEY_QUEUE_HOST = "router:queue:host";
+        private const string CONFIGURATION_KEY_QUEUE_VHOST = "router:queue:vhost";
+        private const string CONFIGURATION_KEY_QUEUE_USERNAME = "router:queue:username";
+        private const string CONFIGURATION_KEY_QUEUE_PASSWORD = "router:queue:password";
 
         #endregion
 
@@ -221,6 +224,10 @@ namespace Loki.SignalServer.Router
         private void CreateRequestQueue()
         {
             IEventedQueueParameters requestQueueParameters = new EventedQueueParameters();
+            requestQueueParameters["Host"] = _config.Get(CONFIGURATION_KEY_QUEUE_HOST);
+            requestQueueParameters["VirtualHost"] = _config.Get(CONFIGURATION_KEY_QUEUE_VHOST);
+            requestQueueParameters["Username"] = _config.Get(CONFIGURATION_KEY_QUEUE_USERNAME);
+            requestQueueParameters["Password"] = _config.Get(CONFIGURATION_KEY_QUEUE_PASSWORD);
             requestQueueParameters["ExchangeId"] = _config.Get(CONFIGURATION_KEY_EXCHANGE_INCOMING);
             requestQueueParameters["ExchangeType"] = ExchangeType.Fanout;
             requestQueueParameters["QueueId"] = _config.Get(CONFIGURATION_KEY_QUEUE_INCOMING);
@@ -239,6 +246,10 @@ namespace Loki.SignalServer.Router
         private void CreateResponseQueue()
         {
             IEventedQueueParameters responseQueueParameters = new EventedQueueParameters();
+            responseQueueParameters["Host"] = _config.Get(CONFIGURATION_KEY_QUEUE_HOST);
+            responseQueueParameters["VirtualHost"] = _config.Get(CONFIGURATION_KEY_QUEUE_VHOST);
+            responseQueueParameters["Username"] = _config.Get(CONFIGURATION_KEY_QUEUE_USERNAME);
+            responseQueueParameters["Password"] = _config.Get(CONFIGURATION_KEY_QUEUE_PASSWORD);
             responseQueueParameters["ExchangeId"] = _config.Get(CONFIGURATION_KEY_EXCHANGE_OUTGOING);
             responseQueueParameters["ExchangeType"] = ExchangeType.Fanout;
             responseQueueParameters["QueueId"] = _config.Get(CONFIGURATION_KEY_QUEUE_OUTGOING);
