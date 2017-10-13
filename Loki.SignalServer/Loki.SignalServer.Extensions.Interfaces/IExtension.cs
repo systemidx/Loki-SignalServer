@@ -26,7 +26,7 @@ namespace Loki.SignalServer.Extensions.Interfaces
         /// Initializes this instance.
         /// </summary>
         void Initialize();
-
+        
         /// <summary>
         /// Registers the action.
         /// </summary>

@@ -37,6 +37,11 @@ namespace Loki.SignalServer.Extensions
         private readonly ISignalRouter _router;
 
         /// <summary>
+        /// The message hooks
+        /// </summary>
+        private readonly ConcurrentBag<Action<ISignal>> _messageHooks = new ConcurrentBag<Action<ISignal>>();
+
+        /// <summary>
         /// The actions
         /// </summary>
         private readonly ConcurrentDictionary<string, Func<ISignal, ISignal>> _actions = new ConcurrentDictionary<string, Func<ISignal, ISignal>>();
@@ -88,7 +93,7 @@ namespace Loki.SignalServer.Extensions
 
         #endregion
 
-        #region Abstract Methods
+        #region Abstract / Virtual Methods
         
         /// <summary>
         /// Registers the connection.
@@ -101,14 +106,28 @@ namespace Loki.SignalServer.Extensions
         /// </summary>
         /// <param name="connection">The connection.</param>
         public abstract void UnregisterConnection(IWebSocketConnection connection);
+        
+        /// <summary>
+        /// Initializes this instance.
+        /// </summary>
+        public virtual void Initialize()
+        {
+            this.IsInitialized = true;
+        }
 
         #endregion
 
         #region Public Methods
 
-        public virtual void Initialize()
+        /// <summary>
+        /// Registers the message hook.
+        /// </summary>
+        /// <param name="hook">The hook.</param>
+        public void RegisterMessageHook(Action<ISignal> hook)
         {
-            IsInitialized = true;
+            _messageHooks.Add(hook);
+
+            Logger.Debug($"Registered extension message hook: {this.Name}");
         }
 
         /// <summary>
@@ -164,6 +183,28 @@ namespace Loki.SignalServer.Extensions
                 Sender = "server",
                 Recipient = request.Sender,
                 Payload = Encoding.UTF8.GetBytes(serializedPayload)
+            };
+        }
+
+        /// <summary>
+        /// Creates the response.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="payload">The payload.</param>
+        /// <param name="action">The action.</param>
+        /// <param name="sender">The sender.</param>
+        /// <param name="recipient">The recipient.</param>
+        /// <returns></returns>
+        public ISignal CreateResponse<T>(T payload, string action, string recipient)
+        {
+            string serializedPayload = JsonConvert.SerializeObject(payload);
+
+            return new Signal
+            {
+                Route = this.Name + '/' + action,
+                Payload = Encoding.UTF8.GetBytes(serializedPayload),
+                Sender = "sender",
+                Recipient = recipient
             };
         }
 
@@ -243,6 +284,9 @@ namespace Loki.SignalServer.Extensions
             ISignal response = null;
             try
             {
+                foreach (Action<ISignal> hook in _messageHooks)
+                    hook.Invoke(signal);
+
                 response = func.Invoke(signal);
             }
             catch (MissingMethodException ex)

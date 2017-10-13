@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using Loki.SignalServer.Interfaces.Queues;
+using Loki.SignalServer.Interfaces.Utility;
 
 namespace Loki.SignalServer.Common.Queues.InMemory
 {
@@ -39,7 +40,7 @@ namespace Loki.SignalServer.Common.Queues.InMemory
         /// <value>
         /// The parameters.
         /// </value>
-        public IEventedQueueParameters Parameters { get; set; }
+        public IParameterList Parameters { get; set; }
 
         #endregion
 
@@ -62,7 +63,7 @@ namespace Loki.SignalServer.Common.Queues.InMemory
         {
             _backingQueue.Enqueue(item);
         }
-
+        
         /// <summary>
         /// Dequeues this instance.
         /// </summary>

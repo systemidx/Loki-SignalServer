@@ -4,8 +4,9 @@ using System.Linq;
 using Loki.Interfaces.Connections;
 using Loki.Interfaces.Dependency;
 using Loki.Interfaces.Logging;
-using Loki.SignalServer.Common.Queues;
+using Loki.SignalServer.Common.Queues.RabbitMq;
 using Loki.SignalServer.Common.Router;
+using Loki.SignalServer.Common.Utility;
 using Loki.SignalServer.Extensions.Interfaces;
 using Loki.SignalServer.Interfaces.Configuration;
 using Loki.SignalServer.Interfaces.Exceptions;
@@ -19,15 +20,34 @@ namespace Loki.SignalServer.Router
     public class SignalRouter : ISignalRouter
     {
         #region Constants
+
+        #region Router Exchanges
+
+        private const string CONFIGURATION_KEY_ROUTER_EXCHANGE_HOST = "router:exchanges:host:host";
+        private const string CONFIGURATION_KEY_ROUTER_EXCHANGE_USERNAME = "router:exchanges:host:username";
+        private const string CONFIGURATION_KEY_ROUTER_EXCHANGE_PASSWORD = "router:exchanges:host:password";
+        private const string CONFIGURATION_KEY_ROUTER_EXCHANGE_VHOST = "router:exchanges:host:vhost";
         
-        private const string CONFIGURATION_KEY_EXCHANGE_INCOMING = "router:exchange:requests";
-        private const string CONFIGURATION_KEY_EXCHANGE_OUTGOING = "router:exchange:responses";
-        private const string CONFIGURATION_KEY_QUEUE_INCOMING = "router:queue:queue-names:requests";
-        private const string CONFIGURATION_KEY_QUEUE_OUTGOING = "router:queue:queue-names:responses";
-        private const string CONFIGURATION_KEY_QUEUE_HOST = "router:queue:host";
-        private const string CONFIGURATION_KEY_QUEUE_VHOST = "router:queue:vhost";
-        private const string CONFIGURATION_KEY_QUEUE_USERNAME = "router:queue:username";
-        private const string CONFIGURATION_KEY_QUEUE_PASSWORD = "router:queue:password";
+        private const string CONFIGURATION_KEY_ROUTER_EXCHANGE_REQUEST_NAME = "router:exchanges:requests:name";
+        private const string CONFIGURATION_KEY_ROUTER_EXCHANGE_REQUEST_ROUTEKEY = "router:exchanges:requests:route-key";
+        private const string CONFIGURATION_KEY_ROUTER_EXCHANGE_RESPONSE_NAME = "router:exchanges:responses:name";
+        private const string CONFIGURATION_KEY_ROUTER_EXCHANGE_RESPONSE_ROUTEKEY = "router:exchanges:responses:route-key";
+
+        #endregion
+
+        #region Router Queues
+        
+        private const string CONFIGURATION_KEY_ROUTER_QUEUE_HOST = "router:queues:host:host";
+        private const string CONFIGURATION_KEY_ROUTER_QUEUE_USERNAME = "router:queues:host:username";
+        private const string CONFIGURATION_KEY_ROUTER_QUEUE_PASSWORD = "router:queues:host:password";
+        private const string CONFIGURATION_KEY_ROUTER_QUEUE_VHOST = "router:queues:host:vhost";
+
+        private const string CONFIGURATION_KEY_ROUTER_QUEUE_REQUEST_NAME = "router:queues:requests:name";
+        private const string CONFIGURATION_KEY_ROUTER_QUEUE_REQUEST_ROUTEKEY = "router:queues:requests:route-key";
+        private const string CONFIGURATION_KEY_ROUTER_QUEUE_RESPONSE_NAME = "router:queues:responses:name";
+        private const string CONFIGURATION_KEY_ROUTER_QUEUE_RESPONSE_ROUTEKEY = "router:queues:responses:route-key";
+
+        #endregion
 
         #endregion
 
@@ -51,12 +71,7 @@ namespace Loki.SignalServer.Router
         /// The logger
         /// </summary>
         private ILogger _logger;
-
-        /// <summary>
-        /// The queue handler
-        /// </summary>
-        private IEventedQueueHandler<ISignal> _queueHandler;
-
+        
         /// <summary>
         /// The configuration
         /// </summary>
@@ -68,15 +83,35 @@ namespace Loki.SignalServer.Router
         private IWebSocketConnectionManager _connectionManager;
 
         /// <summary>
-        /// The request queue
+        /// The router exchange connection
         /// </summary>
-        private IEventedQueue<ISignal> _requestQueue;
+        private IEventedExchangeGenerator _routerExchangeGenerator;
 
         /// <summary>
-        /// The response queue
+        /// The router queue connection
         /// </summary>
-        private IEventedQueue<ISignal> _responseQueue;
-        
+        private IEventedQueueGenerator _routerQueueGenerator;
+
+        /// <summary>
+        /// The request exchange identifier
+        /// </summary>
+        private string _requestExchangeId;
+
+        /// <summary>
+        /// The request queue identifier
+        /// </summary>
+        private string _requestQueueId;
+
+        /// <summary>
+        /// The response exchange identifier
+        /// </summary>
+        private string _responseExchangeId;
+
+        /// <summary>
+        /// The response queue identifier
+        /// </summary>
+        private string _responseQueueId;        
+
         /// <summary>
         /// Initialization flag
         /// </summary>
@@ -115,14 +150,10 @@ namespace Loki.SignalServer.Router
 
             if (_connectionManager == null)
                 _connectionManager = _dependencyUtility.Resolve<IWebSocketConnectionManager>();
-
-            if (_queueHandler == null)
-                _queueHandler = new EventedQueueHandler<ISignal>(_dependencyUtility);
-
-            _queueHandler.Start();
-
-            CreateRequestQueue();
-            CreateResponseQueue();
+            
+            CreateConnectionResources();
+            CreateRequestResources();
+            CreateResponseResources();
 
             _isInitialized = true;
         }
@@ -136,7 +167,7 @@ namespace Loki.SignalServer.Router
             if (!_isInitialized)
                 throw new DependencyNotInitException(nameof(SignalRouter));
 
-            _requestQueue.Enqueue(signal);
+            _routerExchangeGenerator.Publish(_requestExchangeId, signal);
         }
 
         /// <inheritdoc />
@@ -204,10 +235,6 @@ namespace Loki.SignalServer.Router
         {
             if (!_isInitialized)
                 throw new DependencyNotInitException(nameof(SignalRouter));
-
-            _logger.Debug(signal.Format("Direct Response"));
-
-            signal.Sender = "server";
             
             foreach (string entityId in entities)
                 BroadcastSignal(entityId, signal);
@@ -217,51 +244,92 @@ namespace Loki.SignalServer.Router
 
         #region Private Methods
 
-
         /// <summary>
-        /// Creates the request queue.
+        /// Creates the connection resources.
         /// </summary>
-        private void CreateRequestQueue()
+        private void CreateConnectionResources()
         {
-            IEventedQueueParameters requestQueueParameters = new EventedQueueParameters();
-            requestQueueParameters["Host"] = _config.Get(CONFIGURATION_KEY_QUEUE_HOST);
-            requestQueueParameters["VirtualHost"] = _config.Get(CONFIGURATION_KEY_QUEUE_VHOST);
-            requestQueueParameters["Username"] = _config.Get(CONFIGURATION_KEY_QUEUE_USERNAME);
-            requestQueueParameters["Password"] = _config.Get(CONFIGURATION_KEY_QUEUE_PASSWORD);
-            requestQueueParameters["ExchangeId"] = _config.Get(CONFIGURATION_KEY_EXCHANGE_INCOMING);
-            requestQueueParameters["ExchangeType"] = ExchangeType.Fanout;
-            requestQueueParameters["QueueId"] = _config.Get(CONFIGURATION_KEY_QUEUE_INCOMING);
-            requestQueueParameters["RouteKey"] = "requestRouteKey";
-            requestQueueParameters["Durable"] = true;
-            requestQueueParameters["Transient"] = false;
-            requestQueueParameters["AutoDelete"] = true;
-
-            _requestQueue = _queueHandler.CreateQueue(requestQueueParameters);
-            _requestQueue.Dequeued += HandleRequest;
+            //Create exchange connection
+            _routerExchangeGenerator = new RabbitEventedExchangeGenerator(_dependencyUtility, new ParameterList
+            {
+                ["Host"] = _config.Get(CONFIGURATION_KEY_ROUTER_EXCHANGE_HOST),
+                ["VirtualHost"] = _config.Get(CONFIGURATION_KEY_ROUTER_EXCHANGE_VHOST),
+                ["Username"] = _config.Get(CONFIGURATION_KEY_ROUTER_EXCHANGE_USERNAME),
+                ["Password"] = _config.Get(CONFIGURATION_KEY_ROUTER_EXCHANGE_PASSWORD)
+            });
+            
+            //Create queue connection
+            _routerQueueGenerator = new RabbitEventedQueueGenerator(_dependencyUtility, new ParameterList
+            {
+                ["Host"] = _config.Get(CONFIGURATION_KEY_ROUTER_QUEUE_HOST),
+                ["VirtualHost"] = _config.Get(CONFIGURATION_KEY_ROUTER_QUEUE_VHOST),
+                ["Username"] = _config.Get(CONFIGURATION_KEY_ROUTER_QUEUE_USERNAME),
+                ["Password"] = _config.Get(CONFIGURATION_KEY_ROUTER_QUEUE_PASSWORD)
+            });
         }
 
         /// <summary>
-        /// Creates the response queue.
+        /// Creates the request resources.
         /// </summary>
-        private void CreateResponseQueue()
+        private void CreateRequestResources()
         {
-            IEventedQueueParameters responseQueueParameters = new EventedQueueParameters();
-            responseQueueParameters["Host"] = _config.Get(CONFIGURATION_KEY_QUEUE_HOST);
-            responseQueueParameters["VirtualHost"] = _config.Get(CONFIGURATION_KEY_QUEUE_VHOST);
-            responseQueueParameters["Username"] = _config.Get(CONFIGURATION_KEY_QUEUE_USERNAME);
-            responseQueueParameters["Password"] = _config.Get(CONFIGURATION_KEY_QUEUE_PASSWORD);
-            responseQueueParameters["ExchangeId"] = _config.Get(CONFIGURATION_KEY_EXCHANGE_OUTGOING);
-            responseQueueParameters["ExchangeType"] = ExchangeType.Fanout;
-            responseQueueParameters["QueueId"] = _config.Get(CONFIGURATION_KEY_QUEUE_OUTGOING);
-            responseQueueParameters["RouteKey"] = "responseRouteKey";
-            responseQueueParameters["Durable"] = true;
-            responseQueueParameters["Transient"] = false;
-            responseQueueParameters["AutoDelete"] = true;
+            _requestExchangeId = _config.Get(CONFIGURATION_KEY_ROUTER_EXCHANGE_REQUEST_NAME);
+            _requestQueueId = _config.Get(CONFIGURATION_KEY_ROUTER_QUEUE_REQUEST_NAME);
 
-            _responseQueue = _queueHandler.CreateQueue(responseQueueParameters);
-            _responseQueue.Dequeued += HandleResponse;
+            //Create exchange
+            _routerExchangeGenerator.AddExchange<ISignal>(new ParameterList
+            {
+                ["ExchangeId"] = _requestExchangeId,
+                ["RouteKey"] = _config.Get(CONFIGURATION_KEY_ROUTER_EXCHANGE_REQUEST_ROUTEKEY),
+                ["ExchangeType"] = ExchangeType.Fanout
+            });
+
+            //Create queue
+            _routerQueueGenerator.AddQueue<ISignal>(new ParameterList
+            {
+                ["ExchangeId"] = _requestExchangeId,
+                ["QueueId"] = _requestQueueId,
+                ["RouteKey"] = _config.Get(CONFIGURATION_KEY_ROUTER_QUEUE_REQUEST_ROUTEKEY),
+                ["Durable"] = true,
+                ["Transient"] = false,
+                ["AutoDelete"] = true
+            });
+
+            //Attach request handler
+            _routerQueueGenerator.AddDequeueEvent<ISignal>(_requestQueueId, _requestExchangeId, HandleDequeuedRequest);
         }
 
+        /// <summary>
+        /// Creates the response resources.
+        /// </summary>
+        private void CreateResponseResources()
+        {
+            _responseExchangeId = _config.Get(CONFIGURATION_KEY_ROUTER_EXCHANGE_RESPONSE_NAME);
+            _responseQueueId = _config.Get(CONFIGURATION_KEY_ROUTER_QUEUE_RESPONSE_NAME);
+
+            //Create exchange
+            _routerExchangeGenerator.AddExchange<ISignal>(new ParameterList
+            {
+                ["ExchangeId"] = _responseExchangeId,
+                ["RouteKey"] = _config.Get(CONFIGURATION_KEY_ROUTER_EXCHANGE_RESPONSE_ROUTEKEY),
+                ["ExchangeType"] = ExchangeType.Fanout
+            });
+
+            //Create queue
+            _routerQueueGenerator.AddQueue<ISignal>(new ParameterList
+            {
+                ["ExchangeId"] = _responseExchangeId,
+                ["QueueId"] = _responseQueueId,
+                ["RouteKey"] = _config.Get(CONFIGURATION_KEY_ROUTER_QUEUE_RESPONSE_ROUTEKEY),
+                ["Durable"] = true,
+                ["Transient"] = false,
+                ["AutoDelete"] = true
+            });
+
+            //Attach response handler
+            _routerQueueGenerator.AddDequeueEvent<ISignal>(_responseQueueId, _responseExchangeId, HandleDequeuedResponse);
+        }
+        
         /// <summary>
         /// Gets the extension.
         /// </summary>
@@ -294,16 +362,40 @@ namespace Loki.SignalServer.Router
             return extension;
         }
 
+        /// <summary>
+        /// Handles the request.
+        /// </summary>
+        /// <param name="sender">The sender.</param>
+        /// <param name="signal">The signal.</param>
+        /// <exception cref="InvalidExtensionException"></exception>
+        private void HandleDequeuedRequest(object sender, ISignal signal)
+        {
+            IWebSocketConnection[] connections = _connectionManager.GetConnectionsByClientIdentifier(signal.Sender);
+            if (!connections.Any())
+                return;
+
+            IExtension extension = GetExtension(signal);
+            if (extension == null)
+                throw new InvalidExtensionException($"Attempted to route an to an invalid extension. Route: {signal.Route}");
+            
+            _logger.Debug(signal.Format("Request"));
+
+            ISignal response = extension.ExecuteAction(signal.Action, signal);
+
+            if (response == null)
+                return;
+
+            _routerExchangeGenerator.Publish(_responseExchangeId, response);
+        }
 
         /// <summary>
         /// Handles the response.
         /// </summary>
         /// <param name="sender">The sender.</param>
         /// <param name="signal">The signal.</param>
-        private void HandleResponse(object sender, ISignal signal)
+        private void HandleDequeuedResponse(object sender, ISignal signal)
         {
             IWebSocketConnection[] connections = _connectionManager.GetConnectionsByClientIdentifier(signal.Recipient);
-
             if (!connections.Any())
                 return;
 
@@ -312,33 +404,6 @@ namespace Loki.SignalServer.Router
             foreach (IWebSocketConnection connection in connections)
                 connection.SendText(signal);
         }
-
-        /// <summary>
-        /// Handles the request.
-        /// </summary>
-        /// <param name="sender">The sender.</param>
-        /// <param name="signal">The signal.</param>
-        /// <exception cref="InvalidExtensionException"></exception>
-        private void HandleRequest(object sender, ISignal signal)
-        {
-            IExtension extension = GetExtension(signal);
-            if (extension == null)
-                throw new InvalidExtensionException($"Attempted to route an to an invalid extension. Route: {signal.Route}");
-
-            IWebSocketConnection[] connections = _connectionManager.GetConnectionsByClientIdentifier(signal.Sender);
-            if (!connections.Any())
-                return;
-
-            _logger.Debug(signal.Format("Request"));
-
-            ISignal response = extension.ExecuteAction(signal.Action, signal);
-
-            if (response == null)
-                return;
-            
-            _responseQueue.Enqueue(response);
-        }
-        
 
         #endregion
     }

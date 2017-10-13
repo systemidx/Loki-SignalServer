@@ -83,11 +83,11 @@ namespace Loki.SignalServer.Common.Configuration
             string value = _configuration[key];
             
             Type type = typeof(T);
-            
+
             try
             {
                 if (type.GetTypeInfo().IsEnum)
-                    return (T)System.Enum.Parse(type, value, true);
+                    return (T) System.Enum.Parse(type, value, true);
                 return (T) Convert.ChangeType(value, type);
             }
             catch (InvalidCastException ex)
@@ -96,6 +96,15 @@ namespace Loki.SignalServer.Common.Configuration
                     _logger = _dependencyUtility.Resolve<ILogger>();
 
                 _logger.Error(ex);
+            }
+            catch (ArgumentNullException ex)
+            {
+                if (_logger == null)
+                    _logger = _dependencyUtility.Resolve<ILogger>();
+
+                _logger.Error(ex);
+
+                throw;
             }
 
             return default(T);

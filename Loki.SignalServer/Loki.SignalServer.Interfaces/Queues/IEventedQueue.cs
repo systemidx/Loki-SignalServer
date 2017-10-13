@@ -21,14 +21,6 @@ namespace Loki.SignalServer.Interfaces.Queues
         bool CanDequeue { get; }
 
         /// <summary>
-        /// Gets or sets the parameters.
-        /// </summary>
-        /// <value>
-        /// The parameters.
-        /// </value>
-        IEventedQueueParameters Parameters { get; set; }
-
-        /// <summary>
         /// Occurs when [dequeued].
         /// </summary>
         event EventHandler<T> Dequeued;
@@ -38,7 +30,7 @@ namespace Loki.SignalServer.Interfaces.Queues
         /// </summary>
         /// <param name="item">The item.</param>
         void Enqueue(T item);
-
+        
         /// <summary>
         /// Dequeues this instance.
         /// </summary>

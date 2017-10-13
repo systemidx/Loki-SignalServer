@@ -12,9 +12,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Loki.Common" Version="1.0.1" />
-    <PackageReference Include="Loki.Interfaces" Version="1.0.1.8" />
-    <PackageReference Include="Loki.Server" Version="1.0.2.1" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.3.0" />
     <PackageReference Include="Moq" Version="4.7.99" />
     <PackageReference Include="Newtonsoft.Json" Version="10.0.3" />
@@ -23,6 +20,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\Loki\Loki.Common\Loki.Common.csproj" />
+    <ProjectReference Include="..\..\..\Loki\Loki.Interfaces\Loki.Interfaces.csproj" />
+    <ProjectReference Include="..\..\..\Loki\Loki.Server\Loki.Server.csproj" />
     <ProjectReference Include="..\Loki.SignalServer.Common\Loki.SignalServer.Common.csproj" />
     <ProjectReference Include="..\Loki.SignalServer.Extensions.Interfaces\Loki.SignalServer.Extensions.Interfaces.csproj" />
     <ProjectReference Include="..\Loki.SignalServer.Extensions\Loki.SignalServer.Extensions.csproj" />

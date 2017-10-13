@@ -38,7 +38,6 @@ namespace Loki.SignalServer
         private static IDependencyUtility _dependencyUtility;
         private static IConfigurationHandler _config;
         private static ILogger _logger;
-        private static IEventedQueueHandler<ISignal> _queueHandler;
         private static ICacheHandler _cacheHandler;
         private static ISignalRouter _router;
 
@@ -50,7 +49,6 @@ namespace Loki.SignalServer
             HandleConfiguration();
             HandleSecurityContainer();
             HandleLogger();
-            HandleQueueHandler();
             HandleSignalRouter();
             HandleExtensionLoader();
 
@@ -72,14 +70,9 @@ namespace Loki.SignalServer
 
                 //Disable Nagle's Algorithm
                 _server.NoDelay = true;
-
-                //Start the queue handler
-                _queueHandler.Start();
-
+                
                 //Start listening and blocking the main thread
-                _server.Run(false);
-
-                Console.ReadLine();
+                _server.Run();
             }
         }
 
@@ -131,16 +124,6 @@ namespace Loki.SignalServer
             _cacheHandler = new CacheHandler(_dependencyUtility);
 
             _dependencyUtility.Register<ICacheHandler>(_cacheHandler);
-        }
-
-        /// <summary>
-        /// Handles the queue handler.
-        /// </summary>
-        private static void HandleQueueHandler()
-        {
-            _queueHandler = new EventedQueueHandler<ISignal>(_dependencyUtility);
-
-            _dependencyUtility.Register<IEventedQueueHandler<ISignal>>(_queueHandler);
         }
 
         /// <summary>

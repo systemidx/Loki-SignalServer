@@ -1,10 +1,14 @@
-﻿using Loki.Common.Events;
+﻿using System.Data;
+using System.Data.SqlClient;
+using Dapper;
+using Loki.Common.Events;
 using Loki.Interfaces.Connections;
 using Loki.Interfaces.Dependency;
 using Loki.Server.Attributes;
 using Loki.Server.Data;
 using Loki.SignalServer.Common.Router;
 using Loki.SignalServer.Extensions.Interfaces;
+using Loki.SignalServer.Interfaces.Configuration;
 using Loki.SignalServer.Interfaces.Exceptions;
 using Loki.SignalServer.Interfaces.Router;
 using Newtonsoft.Json;
@@ -25,7 +29,7 @@ namespace Loki.SignalServer.Routes
         /// The signal router
         /// </summary>
         private readonly ISignalRouter _signalRouter;
-
+        
         #endregion
 
         #region Constructor
@@ -55,7 +59,7 @@ namespace Loki.SignalServer.Routes
                 return;
 
             Logger.Info($"{sender.ClientIdentifier}/{sender.UniqueIdentifier} connected");
-
+            
             RegisterInExtensions(sender);
 
             base.OnOpen(sender, args);
@@ -69,7 +73,7 @@ namespace Loki.SignalServer.Routes
         public override void OnClose(IWebSocketConnection sender, ConnectionClosedEventArgs args)
         {
             Logger.Info($"{sender.ClientIdentifier}/{sender.UniqueIdentifier} disconnected");
-
+            
             UnregisterInExtensions(sender);
 
             base.OnClose(sender, args);
@@ -91,6 +95,8 @@ namespace Loki.SignalServer.Routes
                 signal.Sender = sender.ClientIdentifier;
             }
 
+            signal.SenderIdentifier = sender.UniqueIdentifier;
+
             try
             {
                 _signalRouter.Route(signal);
@@ -102,11 +108,11 @@ namespace Loki.SignalServer.Routes
 
             base.OnText(sender, args);
         }
-
+        
         #endregion
 
         #region Helper Methods
-
+        
         /// <summary>
         /// Registers the in extensions.
         /// </summary>

@@ -1,4 +1,6 @@
-﻿namespace Loki.SignalServer.Interfaces.Router
+﻿using System;
+
+namespace Loki.SignalServer.Interfaces.Router
 {
     public interface ISignal
     {
@@ -33,6 +35,14 @@
         /// The sender.
         /// </value>
         string Sender { get; set; }
+
+        /// <summary>
+        /// Gets or sets the sender unique identifier.
+        /// </summary>
+        /// <value>
+        /// The sender unique identifier.
+        /// </value>
+        Guid SenderIdentifier{ get; set; }
 
         /// <summary>
         /// Gets or sets the recipient.
