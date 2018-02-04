@@ -4,7 +4,7 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
-    <Version>1.1.0.0</Version>
+    <Version>1.1.0.1</Version>
     <Authors>Systemidx</Authors>
     <Company>Systemidx</Company>
     <Description>The common library for the Loki WebSocket Signaling Server</Description>
@@ -13,8 +13,8 @@
     <PackageProjectUrl>https://github.com/systemidx/Loki.SignalServer/</PackageProjectUrl>
     <RepositoryUrl>https://github.com/systemidx/Loki.SignalServer/</RepositoryUrl>
     <PackageTags>Loki WebSocket WebSocketServer NET csharp ws wss signaling chat</PackageTags>
-    <AssemblyVersion>1.1.0.0</AssemblyVersion>
-    <FileVersion>1.1.0.0</FileVersion>
+    <AssemblyVersion>1.1.0.1</AssemblyVersion>
+    <FileVersion>1.1.0.1</FileVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
