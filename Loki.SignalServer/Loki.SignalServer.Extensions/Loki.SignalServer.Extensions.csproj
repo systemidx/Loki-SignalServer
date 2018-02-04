@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <Version>1.0.3.1</Version>
+    <Version>1.1.0.0</Version>
     <Authors>Systemidx</Authors>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
@@ -13,8 +13,8 @@
     <PackageTags>Loki WebSocket WebSocketServer NET csharp ws wss signaling chat</PackageTags>
     <Description>The extension library for the Loki WebSocket Signaling Server</Description>
     <Company>Systemidx</Company>
-    <AssemblyVersion>1.0.3.1</AssemblyVersion>
-    <FileVersion>1.0.3.1</FileVersion>
+    <AssemblyVersion>1.1.0.0</AssemblyVersion>
+    <FileVersion>1.1.0.0</FileVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
@@ -23,12 +23,12 @@
 
   <ItemGroup>
     <PackageReference Include="System.Runtime.Loader" Version="4.3.0" />
+    <PackageReference Include="Loki.Common" Version="1.1.0" />
+    <PackageReference Include="Loki.Interfaces" Version="1.1.0" />
+    <PackageReference Include="Loki.Server" Version="1.1.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\Loki\Loki.Common\Loki.Common.csproj" />
-    <ProjectReference Include="..\..\..\Loki\Loki.Interfaces\Loki.Interfaces.csproj" />
-    <ProjectReference Include="..\..\..\Loki\Loki.Server\Loki.Server.csproj" />
     <ProjectReference Include="..\Loki.SignalServer.Common\Loki.SignalServer.Common.csproj" />
     <ProjectReference Include="..\Loki.SignalServer.Extensions.Interfaces\Loki.SignalServer.Extensions.Interfaces.csproj" />
     <ProjectReference Include="..\Loki.SignalServer.Interfaces\Loki.SignalServer.Interfaces.csproj" />
